@@ -739,6 +739,9 @@ function renderCred(){
     if(hasta && c.fecha && c.fecha>hasta) return false;
     return true;
   });
+  src.sort(function(a,b){
+    return (b.fecha||'').localeCompare(a.fecha||'');
+  });
   var empty=document.getElementById('cred-empty');
   var tbl=document.getElementById('t-cred');
   if(!tbl) return;
