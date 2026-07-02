@@ -232,11 +232,19 @@ tr:hover td{background:#fafafa;}
   </div>
 </div>
 <!-- Historial table -->
+<div class="sec" style="margin-top:4px;">Pendientes &#8212; m&#225;s antiguas primero</div>
 <div id="cred-empty" style="text-align:center;padding:40px;color:#888;font-size:12px;">
   No hay solicitudes a&#250;n. Ingresa solicitudes desde la pesta&#241;a <strong>Administraci&#243;n</strong>.
 </div>
 <table id="t-cred" style="display:none;font-size:11px;">
-  <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>Cierre</th><th>Condici&#243;n</th><th>Monto</th><th>Obs.</th><th>Estado</th></tr>
+  <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th></tr>
+</table>
+<div class="sec" style="margin-top:18px;">Resueltas &#8212; Rechazadas y Autorizadas</div>
+<div id="cred-resueltas-empty" style="text-align:center;padding:24px;color:#888;font-size:12px;">
+  A&#250;n no hay solicitudes resueltas.
+</div>
+<table id="t-cred-resueltas" style="display:none;font-size:11px;">
+  <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th></tr>
 </table>
 </div></div>
 <div class="page" id="page-admin"><div class="pi">
@@ -329,7 +337,7 @@ tr:hover td{background:#fafafa;}
 </div>
 <div id="ad-empty" style="text-align:center;padding:40px;color:#888;font-size:12px;">No hay solicitudes a&#250;n.</div>
 <table id="t-admin" style="display:none;font-size:11px;">
-  <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>Cierre</th><th>Condici&#243;n</th><th>Monto</th><th>Obs.</th><th>Estado</th><th>Editar</th></tr>
+  <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th><th>Editar</th></tr>
 </table>
 </div></div>
 <div class="page" id="page-ops"><div class="pi"><div class="sec">Panel de Operaciones &#8212; 01-07-2026</div><div class="g4" id="ok"></div><div class="g2" style="margin-bottom:10px;">
@@ -763,6 +771,16 @@ function diasBadge(dias){
   else{color='#9C1C1C';bg='#FADBD8';label='Cr\u00edtico';}
   return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:'+bg+';color:'+color+';white-space:nowrap;">'+dias+'d \u00b7 '+label+'</span>';
 }
+var COND_MAP={
+  '0100':'Pago inmediato','0104':'7 d\u00edas','0105':'10 d\u00edas','0107':'15 d\u00edas',
+  '0108':'20 d\u00edas','0109':'30 d\u00edas','0110':'40 d\u00edas','0112':'45 d\u00edas',
+  '0113':'60 d\u00edas','0116':'90 d\u00edas'
+};
+function condLabel(cond){
+  if(!cond||cond==='Sin especificar') return '<span style="color:#888">Sin especificar</span>';
+  var lbl=COND_MAP[cond];
+  return lbl ? (cond+' <span style="color:#555">\u00b7 '+lbl+'</span>') : cond;
+}
 
 function renderCred(){
   var vend=(document.getElementById('cf-vend')||{}).value||'';
@@ -777,36 +795,58 @@ function renderCred(){
     if(hasta && c.fecha && c.fecha>hasta) return false;
     return true;
   });
-  src.sort(function(a,b){
-    return (b.fecha||'').localeCompare(a.fecha||'');
+
+  var pendientes=src.filter(function(c){return c.status==='Pendiente';});
+  var resueltas=src.filter(function(c){return c.status!=='Pendiente';});
+
+  pendientes.sort(function(a,b){return (a.fecha||'').localeCompare(b.fecha||'');});
+
+  var ordenEstado={'Rechazado':0,'Autorizado':1};
+  resueltas.sort(function(a,b){
+    var oa=(ordenEstado[a.status]!==undefined)?ordenEstado[a.status]:2;
+    var ob=(ordenEstado[b.status]!==undefined)?ordenEstado[b.status]:2;
+    if(oa!==ob) return oa-ob;
+    return (a.fecha||'').localeCompare(b.fecha||'');
   });
-  var empty=document.getElementById('cred-empty');
-  var tbl=document.getElementById('t-cred');
-  if(!tbl) return;
-  if(!src.length){tbl.style.display='none';if(empty)empty.style.display='block';return;}
-  if(empty)empty.style.display='none';
-  tbl.style.display='';
-  var h='<tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>D&iacute;as</th><th>Cierre</th><th>Condición</th><th>Monto</th><th>Obs.</th><th>Estado</th></tr>';
-  src.forEach(function(c,i){
-    var ri=creditos.indexOf(c);
-    var sc=c.status==='Autorizado'?'bg':c.status==='Rechazado'?'br':'ba';
-    var mf=c.mon==='UF'?c.monto.toFixed(2)+' UF':'$'+formatCLP(c.monto);
-    h+='<tr>'
-      +'<td style="text-align:center;color:#888">'+(ri+1)+'</td>'
-      +'<td style="font-family:monospace;font-size:10px">'+formatRut(c.rut)+'</td>'
-      +'<td><strong>'+c.nombre+'</strong></td>'
-      +'<td style="font-size:11px">'+(c.vend||'—')+'</td>'
-      +'<td style="font-size:11px">'+(c.fecha||'—')+'</td>'
-      +'<td style="text-align:center">'+diasBadge(diasCredito(c.fecha))+'</td>'
-      +'<td style="font-size:11px">'+(c.fcierre||'—')+'</td>'
-      +'<td style="font-size:11px">'+c.cond+'</td>'
-      +'<td style="font-weight:700">'+mf+'</td>'
-      +'<td style="font-size:11px;max-width:140px;">'+c.obs+(c.resolucion?('<br><span style="color:#7D6608;font-style:italic;">\u21B3 '+c.resolucion+'</span>'):'')+'</td>'
-      +'<td><span class="badge '+sc+'">'+c.status+'</span></td>'
-      +'</tr>';
-  });
-  tbl.innerHTML=h;
+
+  var theadRow='<tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>D&iacute;as</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th></tr>';
+
+  function rowsHtml(list){
+    return list.map(function(c){
+      var ri=creditos.indexOf(c);
+      var sc=c.status==='Autorizado'?'bg':c.status==='Rechazado'?'br':'ba';
+      var mf=c.mon==='UF'?c.monto.toFixed(2)+' UF':'$'+formatCLP(c.monto);
+      return '<tr>'
+        +'<td style="text-align:center;color:#888">'+(ri+1)+'</td>'
+        +'<td style="font-family:monospace;font-size:10px">'+formatRut(c.rut)+'</td>'
+        +'<td><strong>'+c.nombre+'</strong></td>'
+        +'<td style="font-size:11px">'+(c.vend||'—')+'</td>'
+        +'<td style="font-size:11px">'+(c.fecha||'—')+'</td>'
+        +'<td style="text-align:center">'+diasBadge(diasCredito(c.fecha))+'</td>'
+        +'<td style="font-size:11px">'+(c.fcierre||'—')+'</td>'
+        +'<td style="font-size:11px">'+condLabel(c.cond)+'</td>'
+        +'<td style="font-weight:700">'+mf+'</td>'
+        +'<td style="font-size:11px;max-width:140px;">'+c.obs+(c.resolucion?('<br><span style="color:#7D6608;font-style:italic;">\u21B3 '+c.resolucion+'</span>'):'')+'</td>'
+        +'<td><span class="badge '+sc+'">'+c.status+'</span></td>'
+        +'</tr>';
+    }).join('');
+  }
+
+  var emptyP=document.getElementById('cred-empty');
+  var tblP=document.getElementById('t-cred');
+  if(tblP){
+    if(!pendientes.length){tblP.style.display='none';if(emptyP)emptyP.style.display='block';}
+    else{if(emptyP)emptyP.style.display='none';tblP.style.display='';tblP.innerHTML=theadRow+rowsHtml(pendientes);}
+  }
+
+  var emptyR=document.getElementById('cred-resueltas-empty');
+  var tblR=document.getElementById('t-cred-resueltas');
+  if(tblR){
+    if(!resueltas.length){tblR.style.display='none';if(emptyR)emptyR.style.display='block';}
+    else{if(emptyR)emptyR.style.display='none';tblR.style.display='';tblR.innerHTML=theadRow+rowsHtml(resueltas);}
+  }
 }
+
 function credSearch(){renderCred();}
 function resetCredFiltros(){
   ['cf-vend','cf-mes','cf-desde','cf-hasta'].forEach(function(id){
@@ -1544,7 +1584,7 @@ function renderAdmin(){
   if(!tbl) return;
   if(!creditos.length){tbl.style.display='none';empty.style.display='block';return;}
   tbl.style.display=''; empty.style.display='none';
-  var h='<tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>D&iacute;as</th><th>Cierre</th><th>Condici\u00f3n</th><th>Monto</th><th>Obs.</th><th>Estado</th><th>Editar</th></tr>';
+  var h='<tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>D&iacute;as</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th><th>Editar</th></tr>';
   creditos.forEach(function(c,i){
     var sc=c.status==='Autorizado'?'bg':c.status==='Rechazado'?'br':'ba';
     var mf=c.mon==='UF'?c.monto.toFixed(2)+' UF':'$'+formatCLP(c.monto);
@@ -1556,7 +1596,7 @@ function renderAdmin(){
       +'<td style="font-size:11px">'+( c.fecha||'\u2014')+'</td>'
       +'<td style="text-align:center">'+diasBadge(diasCredito(c.fecha))+'</td>'
       +'<td style="font-size:11px">'+( c.fcierre||'\u2014')+'</td>'
-      +'<td style="font-size:11px">'+c.cond+'</td>'
+      +'<td style="font-size:11px">'+condLabel(c.cond)+'</td>'
       +'<td style="font-weight:700">'+mf+'</td>'
       +'<td style="font-size:11px;max-width:140px;">'+c.obs+(c.resolucion?('<br><span style="color:#7D6608;font-style:italic;">\u21B3 '+c.resolucion+'</span>'):'')+'</td>'
       +'<td><span class="badge '+sc+'">'+c.status+'</span></td>'
