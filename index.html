@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 var firebaseConfig={
   apiKey:"AIzaSyBd0hyGeYZmhSmEw9dfPKsHx3Wb5JBuQ6U",
@@ -19,10 +20,20 @@ var firebaseConfig={
 try{
   firebase.initializeApp(firebaseConfig);
   var fsDB=firebase.firestore();
-}catch(e){ var fsDB=null; }
+  var fsAuth=firebase.auth();
+}catch(e){ var fsDB=null; var fsAuth=null; }
 </script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
+body.locked>*:not(#login-gate){display:none!important;}
+#login-gate{display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#9C1C1C 0%,#6B0F0F 100%);align-items:center;justify-content:center;padding:20px;}
+body.locked #login-gate{display:flex;}
+.lg-box{background:#fff;border-radius:14px;padding:32px 28px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);text-align:center;}
+.lg-input{width:100%;padding:11px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:10px;outline:none;box-sizing:border-box;}
+.lg-input:focus{border-color:#9C1C1C;}
+.lg-btn{width:100%;padding:12px;border:none;border-radius:8px;background:#9C1C1C;color:#fff;font-size:14px;font-weight:700;margin-top:14px;cursor:pointer;}
+.lg-btn:disabled{opacity:.6;cursor:default;}
+.lg-err{color:#C00000;font-size:12px;margin-top:10px;display:none;}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;color:#1a1a1a;font-size:14px;}
 .nav{background:#9C1C1C;display:flex;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);padding:0 10px;min-height:50px;gap:8px;}
 .logo{display:flex;align-items:center;gap:8px;flex-shrink:0;padding:4px 0;}
@@ -105,8 +116,21 @@ tr:hover td{background:#fafafa;}
 @media(max-width:768px){.g4{grid-template-columns:1fr 1fr;}.g3{grid-template-columns:1fr 1fr;}.g2{grid-template-columns:1fr;}.vkpis{grid-template-columns:1fr 1fr;}.gauge-grid{grid-template-columns:1fr 1fr;}table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}}.page{overflow-x:hidden;}@media(max-width:768px) and (orientation:portrait){.tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;}.tab{white-space:nowrap;flex-shrink:0;}.pi{overflow-x:auto;-webkit-overflow-scrolling:touch;}}@media(max-width:480px){.page img:first-child{max-height:160px;min-height:110px;object-position:center 20%;}}
 </style>
 </head>
-<body>
-<div class="nav"><div class="logo"><img src="data:image/jpeg;base64,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" alt="FT Foods" style="height:36px;width:auto;object-fit:contain;"><span style="color:#fff;font-size:12px;font-weight:600;white-space:nowrap;">Antofagasta</span></div><div class="tabs"><div class="tab on" onclick="go('inicio',this)">&#127968; Inicio</div><div class="tab" onclick="go('metas',this)">&#128202; Metas</div><div class="tab" onclick="go('vendedores',this)">&#128101; Vendedores</div><div class="tab" onclick="go('clientes',this)">&#127978; Clientes</div><div class="tab" onclick="go('categorias',this)">&#128230; Categor&#237;as</div><div class="tab" onclick="go('stock',this)">&#128203; Stock</div><div class="tab" onclick="go('precios',this)">&#128178; Precios</div><div class="tab" onclick="go('bono',this)">&#127919; Bono</div><div class="tab" onclick="go('creditos',this)">&#128221; Creditos</div><div class="tab" onclick="goAdmin()">&#9965;&#65039; Administraci&#243;n</div><div class="tab" onclick="goOps()">&#128274; Ops</div><div class="tab" onclick="goHist()">&#128340; Hist&#243;rico</div><div class="tab" onclick="goSec()">&#128272; Seguridad</div></div><button class="fsb" id="fsb" onclick="toggleFS()">&#9956;</button></div>
+<body class="locked">
+<div id="login-gate">
+  <div class="lg-box">
+    <div style="font-size:28px;font-weight:800;color:#9C1C1C;letter-spacing:1px;">FT FOODS</div>
+    <div style="font-size:11px;color:#888;margin-top:2px;letter-spacing:2px;">ANTOFAGASTA</div>
+    <div style="font-size:15px;font-weight:700;margin-top:18px;">Iniciar sesi&#243;n</div>
+    <div style="font-size:11px;color:#888;margin-top:4px;">Acceso restringido &#8212; panel de ventas</div>
+    <input type="email" id="lg-email" class="lg-input" placeholder="Correo" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('lg-pass').focus()">
+    <input type="password" id="lg-pass" class="lg-input" placeholder="Contrase&#241;a" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="lg-btn" id="lg-btn" onclick="doLogin()">Ingresar</button>
+    <div class="lg-err" id="lg-err"></div>
+    <div style="font-size:10px;color:#bbb;margin-top:16px;">&#191;No tienes acceso? Solicita una cuenta a tu jefe de sucursal.</div>
+  </div>
+</div>
+<div class="nav"><div class="logo"><img src="data:image/jpeg;base64,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" alt="FT Foods" style="height:36px;width:auto;object-fit:contain;"><span style="color:#fff;font-size:12px;font-weight:600;white-space:nowrap;">Antofagasta</span></div><div class="tabs"><div class="tab on" onclick="go('inicio',this)">&#127968; Inicio</div><div class="tab" onclick="go('metas',this)">&#128202; Metas</div><div class="tab" onclick="go('vendedores',this)">&#128101; Vendedores</div><div class="tab" onclick="go('clientes',this)">&#127978; Clientes</div><div class="tab" onclick="go('categorias',this)">&#128230; Categor&#237;as</div><div class="tab" onclick="go('stock',this)">&#128203; Stock</div><div class="tab" onclick="go('precios',this)">&#128178; Precios</div><div class="tab" onclick="go('bono',this)">&#127919; Bono</div><div class="tab" onclick="go('creditos',this)">&#128221; Creditos</div><div class="tab" onclick="goAdmin()">&#9965;&#65039; Administraci&#243;n</div><div class="tab" onclick="goOps()">&#128274; Ops</div><div class="tab" onclick="goHist()">&#128340; Hist&#243;rico</div><div class="tab" id="tab-seguridad" onclick="goSec()" style="display:none;">&#128272; Seguridad</div></div><span id="user-badge" style="font-size:10px;color:#fff;opacity:.85;margin-left:auto;padding-right:8px;white-space:nowrap;"></span><button class="fsb" id="fsb" onclick="toggleFS()">&#9956;</button><button class="fsb" id="logout-btn" onclick="doLogout()" title="Cerrar sesi&#243;n" style="margin-left:4px;">&#128274;</button></div>
 <div class="md" id="md"><div class="mdbox"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><strong id="md-t" style="font-size:14px;"></strong><button onclick="closeMd()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;">&#10005;</button></div><div id="md-b"></div></div></div>
 <div class="ol" id="ol"><div class="ob"><div style="font-size:40px;">&#128274;</div><div style="font-size:17px;font-weight:700;margin-top:8px;">Area de Operaciones</div><div style="font-size:12px;color:#888;margin-top:4px;">Solo personal autorizado</div><input class="oi" type="password" id="opsp" placeholder="Ingresa la clave" onkeydown="if(event.key==='Enter')chkOps()"><button class="obt" onclick="chkOps()">Acceder</button><div class="oe" id="ope">Clave incorrecta.</div><div style="margin-top:10px;"><button onclick="document.getElementById('ol').classList.remove('on')" style="background:none;border:none;color:#888;font-size:12px;cursor:pointer;">Cancelar</button></div></div></div>
 <div class="ol" id="ol2"><div class="ob"><div style="font-size:40px;">&#128272;</div><div style="font-size:17px;font-weight:700;margin-top:8px;">Seguridad y Accesos</div><div style="font-size:12px;color:#888;margin-top:4px;">Solo Felipe Castillo</div><input class="oi" type="password" id="secp" placeholder="Ingresa la clave" onkeydown="if(event.key==='Enter')chkSec()"><button class="obt" onclick="chkSec()">Acceder</button><div class="oe" id="sece">Clave incorrecta.</div><div style="margin-top:10px;"><button onclick="document.getElementById('ol2').classList.remove('on')" style="background:none;border:none;color:#888;font-size:12px;cursor:pointer;">Cancelar</button></div></div></div>
@@ -361,12 +385,12 @@ tr:hover td{background:#fafafa;}
 </div></div>
 <div class="page" id="page-seguridad"><div class="pi">
 <div class="sec">&#128272; Seguridad &#8212; Accesos al panel</div>
-<div style="background:#FFF8E7;border:.5px solid #C9A227;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#7D6608;">
-  Este registro guarda fecha, hora y datos del navegador/dispositivo de cada persona que abre el panel (una vez por d&#237;a por dispositivo). <strong>No identifica a la persona ni captura su n&#250;mero de tel&#233;fono o IP real</strong> &#8212; un tel&#233;fono nunca comparte esos datos con una p&#225;gina web por dise&#241;o de privacidad. Sirve como bit&#225;cora de actividad, no como control de acceso.
+<div style="background:#E2EFDA;border:.5px solid #97C459;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#375623;">
+  El panel ahora requiere inicio de sesi&#243;n con cuenta autorizada. Cada acceso queda registrado con el correo real de quien inici&#243; sesi&#243;n, fecha, hora y dispositivo.
 </div>
 <div id="acc-empty" style="text-align:center;padding:40px;color:#888;font-size:12px;">Cargando registro de accesos...</div>
 <table id="t-accesos" style="display:none;font-size:11px;">
-  <tr><th>Fecha</th><th>Hora</th><th>Dispositivo</th><th>Navegador</th><th>Pantalla</th></tr>
+  <tr><th>Usuario</th><th>Fecha</th><th>Hora</th><th>Dispositivo</th><th>Navegador</th><th>Pantalla</th></tr>
 </table>
 </div></div>
 <script>
@@ -416,6 +440,50 @@ function goHist(){
   setTimeout(function(){document.getElementById('opsp').focus();},100);
 }
 var secOk=false;
+function doLogin(){
+  var email=document.getElementById('lg-email').value.trim();
+  var pass=document.getElementById('lg-pass').value;
+  var err=document.getElementById('lg-err');
+  var btn=document.getElementById('lg-btn');
+  err.style.display='none';
+  if(!email||!pass){err.textContent='Ingresa correo y contrase\u00f1a.';err.style.display='block';return;}
+  if(!fsAuth){err.textContent='Sin conexi\u00f3n al servicio de acceso. Revisa tu internet e intenta de nuevo.';err.style.display='block';return;}
+  btn.disabled=true; btn.textContent='Ingresando...';
+  fsAuth.signInWithEmailAndPassword(email,pass).catch(function(e){
+    var msg='No se pudo iniciar sesi\u00f3n.';
+    if(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found') msg='Correo o contrase\u00f1a incorrectos.';
+    if(e.code==='auth/too-many-requests') msg='Demasiados intentos. Espera unos minutos e intenta de nuevo.';
+    if(e.code==='auth/invalid-email') msg='El correo no tiene un formato v\u00e1lido.';
+    err.textContent=msg; err.style.display='block';
+  }).finally(function(){
+    btn.disabled=false; btn.textContent='Ingresar';
+  });
+}
+function doLogout(){
+  if(fsAuth) fsAuth.signOut();
+}
+var ADMIN_EMAILS=['felipe.castillo@ftfoods.cl'];
+var isAdmin=false;
+if(fsAuth){
+  fsAuth.onAuthStateChanged(function(user){
+    if(user){
+      document.body.classList.remove('locked');
+      document.getElementById('lg-email').value='';
+      document.getElementById('lg-pass').value='';
+      isAdmin=ADMIN_EMAILS.indexOf((user.email||'').toLowerCase())!==-1;
+      if(isAdmin){ opsOk=true; secOk=true; }
+      var tabSec=document.getElementById('tab-seguridad');
+      if(tabSec) tabSec.style.display=isAdmin?'':'none';
+      var ub=document.getElementById('user-badge');
+      if(ub) ub.textContent=(isAdmin?'\u2605 Administrador \u00b7 ':'')+(user.email||'');
+      logAcceso(user);
+    }else{
+      document.body.classList.add('locked');
+      isAdmin=false;
+    }
+  });
+}
+
 function goSec(){
   if(secOk){go('seguridad',document.querySelectorAll('.tab')[12]);renderAccesos();return;}
   document.getElementById('ol2').classList.add('on');
@@ -1661,10 +1729,8 @@ function renderAdmin(){
   var fi=document.getElementById('ad-finicio');
   if(fi) fi.value=new Date().toISOString().slice(0,10);
 
-  // Registro de accesos: una entrada por dispositivo por dia (no identifica
-  // a la persona, solo fecha/hora + info de navegador -- ver nota en la
-  // pestana Seguridad).
-  logAcceso();
+  // El registro de accesos ahora se dispara automaticamente desde
+  // onAuthStateChanged al iniciar sesion (ver logAcceso(user) mas abajo).
 })();
 
 function detectarDispositivo(ua){
@@ -1685,14 +1751,17 @@ function detectarNavegador(ua){
   if(/Firefox\//i.test(ua)) return 'Firefox';
   return 'Otro';
 }
-function logAcceso(){
+function logAcceso(user){
   if(!fsDB) return;
   try{
     var hoy=new Date().toISOString().slice(0,10);
-    var yaLog=localStorage.getItem('ftacceso_'+hoy);
-    if(yaLog) return; // ya se registro este dispositivo hoy
+    var email=(user&&user.email)||'desconocido';
+    var logKey='ftacceso_'+hoy+'_'+email;
+    var yaLog=localStorage.getItem(logKey);
+    if(yaLog) return; // este usuario ya quedo registrado hoy en este dispositivo
     var ua=navigator.userAgent||'';
     fsDB.collection('accesos').add({
+      usuario:email,
       fecha:hoy,
       hora:new Date().toTimeString().slice(0,5),
       ts:Date.now(),
@@ -1701,7 +1770,7 @@ function logAcceso(){
       pantalla:(screen.width||'?')+'x'+(screen.height||'?'),
       ua:ua
     }).then(function(){
-      localStorage.setItem('ftacceso_'+hoy,'1');
+      localStorage.setItem(logKey,'1');
     }).catch(function(err){
       console.warn('No se pudo registrar acceso:',err);
     });
@@ -1720,10 +1789,10 @@ function renderAccesos(){
     if(snap.empty){tbl.style.display='none';if(empty){empty.textContent='Sin accesos registrados todavia.';empty.style.display='block';}return;}
     if(empty) empty.style.display='none';
     tbl.style.display='';
-    var h='<tr><th>Fecha</th><th>Hora</th><th>Dispositivo</th><th>Navegador</th><th>Pantalla</th></tr>';
+    var h='<tr><th>Usuario</th><th>Fecha</th><th>Hora</th><th>Dispositivo</th><th>Navegador</th><th>Pantalla</th></tr>';
     snap.forEach(function(doc){
       var a=doc.data();
-      h+='<tr><td>'+(a.fecha||'\u2014')+'</td><td>'+(a.hora||'\u2014')+'</td>'
+      h+='<tr><td><strong>'+(a.usuario||'\u2014')+'</strong></td><td>'+(a.fecha||'\u2014')+'</td><td>'+(a.hora||'\u2014')+'</td>'
         +'<td>'+(a.dispositivo||'\u2014')+'</td><td>'+(a.navegador||'\u2014')+'</td>'
         +'<td style="font-size:10px;color:#888">'+(a.pantalla||'\u2014')+'</td></tr>';
     });
