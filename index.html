@@ -113,6 +113,9 @@ tr:hover td{background:#fafafa;}
 .gauge-panel{background:#1F2937;border-radius:12px;padding:14px;margin-bottom:12px;}
 .gauge-title{color:#fff;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
 .gauge-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.vend-grid{display:grid;grid-template-columns:1fr 400px;gap:16px;align-items:start;margin-bottom:14px;}
+@media(max-width:900px){.vend-grid{grid-template-columns:1fr 320px;}}
+@media(max-width:768px){.vend-grid{grid-template-columns:1fr;}}
 .gauge-card{background:#fff;border-radius:8px;padding:6px 4px;text-align:center;}
 .gauge-lbl{font-size:10px;font-weight:700;margin-bottom:4px;}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -218,7 +221,7 @@ tr:hover td{background:#fafafa;}
 </div>
 </div></div>
 <div class="page" id="page-metas"><div class="pi"><div class="sec">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl">Dias restantes (J16 feriado)</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
-<div class="page" id="page-vendedores"><div class="pi"><div class="sec">Desempeno individual &#8212; Clic en fila para ver detalle</div><div style="display:grid;grid-template-columns:1fr 230px;gap:16px;align-items:start;margin-bottom:14px;"><table id="tv"></table><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:8px;"><canvas id="c2" height="220"></canvas></div></div></div><div id="vcs"></div></div></div>
+<div class="page" id="page-vendedores"><div class="pi"><div class="sec">Desempeno individual &#8212; Clic en fila para ver detalle</div><div class="vend-grid"><table id="tv"></table><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div><div id="vcs"></div></div></div>
 <div class="page" id="page-clientes"><div class="pi"><div class="sec">Por vendedor y cliente &#8212; Clic para expandir productos</div><div class="fbtns" id="fb-v"></div><input class="sb" id="sb-c" placeholder="Buscar cliente..."><table id="tc"></table></div></div>
 <div class="page" id="page-categorias"><div class="pi"><div class="sec">Mix por categoria</div><div class="fbtns" id="fb-cat-v"><button class="fbtn on" data-n="Todos" onclick="selCat('Todos',this)">Sucursal</button></div><div class="g2"><div><div class="card" style="padding:10px;"><canvas id="c3" height="380"></canvas></div></div><div><table id="tcat"></table></div></div>
 <div class="sec" style="margin-top:18px;">Apertura G2 &#8212; <span id="g2-titulo">Sucursal Antofagasta</span></div>
