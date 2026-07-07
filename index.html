@@ -729,10 +729,10 @@ function selCat(n,el){
   document.querySelectorAll('#fb-cat-v .fbtn').forEach(function(b){b.classList.remove('on');});
   el.classList.add('on');
   var raw=(n==='Todos')?D.cat_global:(D.cat_por_vend[n]||[]);
-  // Normalize: cat_por_vend uses 'val', cat_global uses 'fact'
+  // Normalize: cat_por_vend uses 'val'/'mix', cat_global uses 'fact'/'pct'
   var data=raw.map(function(x){
-    return{cat:x.cat,fact:x.fact!=null?x.fact:x.val,pct:x.pct,color:x.color||D.cat_colors[x.cat]||'#888'};
-  }).filter(function(x){return x.fact>0;});
+    return{cat:x.cat,fact:x.fact!=null?x.fact:x.val,pct:x.pct!=null?x.pct:x.mix,color:x.color||D.cat_colors[x.cat]||'#888'};
+  }).filter(function(x){return x.fact>0;}).sort(function(a,b){return b.fact-a.fact;});
   buildCatChart(data,n==='Todos'?'Sucursal Antofagasta':n);
   buildCatTable(data);
   buildG2Chart(n);
@@ -1171,15 +1171,18 @@ document.addEventListener('DOMContentLoaded',function(){
 
   // Tabla vendedores
   var vtr='<tr><th>Vendedor</th><th>Facturacion</th><th>Kilos</th><th>Margen $</th><th>Margen %</th><th>Part. %</th></tr>';
-  D.vendedores.forEach(function(v){
+  var vendTotalFact=D.vendedores.reduce(function(s,v){return s+v.fact;},0)||1;
+  var vendSorted=D.vendedores.slice().sort(function(a,b){return b.fact-a.fact;});
+  vendSorted.forEach(function(v){
     var mb=v.margen_pct>=18?'bg':v.margen_pct>=14?'ba':'br';
+    var partPct=(v.fact/vendTotalFact*100).toFixed(1);
     vtr+='<tr style="cursor:pointer" data-n="'+v.nombre+'" onclick="handleVRow(this)">'
       +'<td><span class="dot" style="background:'+v.color+'"></span><strong>'+v.nombre+'</strong></td>'
       +'<td>$'+v.fact+'M</td>'
       +'<td>'+v.kg.toLocaleString('es-CL')+' Kg</td>'
       +'<td>$'+v.margen_clp+'M</td>'
       +'<td><span class="badge '+mb+'">'+v.margen_pct+'%</span></td>'
-      +'<td>'+v.part+'%</td></tr>';
+      +'<td>'+partPct+'%</td></tr>';
   });
   document.getElementById('tv').innerHTML=vtr;
 
