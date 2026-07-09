@@ -130,6 +130,15 @@ tr:hover td{background:#fafafa;}
 .gauge-lbl{font-size:10px;font-weight:700;margin-bottom:4px;}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulseLive{0%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.4);}100%{opacity:1;transform:scale(1);}}
+.cred-table{border-radius:10px;overflow:hidden;}
+.cred-table th{padding:7px 9px;font-size:10px;letter-spacing:.3px;position:sticky;top:0;z-index:1;}
+.cred-table td{padding:6px 9px;font-size:11px;transition:background .15s ease;}
+.cred-table tr:not(:first-child):nth-child(even){background:#FAFBFC;}
+.cred-table tr:not(:first-child):hover td{background:#EFF4FF;}
+.cred-table tr:not(:first-child){border-left:3px solid transparent;transition:border-color .15s ease;}
+.cred-table tr:not(:first-child):hover{border-left:3px solid #9C1C1C;}
+@keyframes rowIn{from{opacity:0;transform:translateY(-3px);}to{opacity:1;transform:translateY(0);}}
+.cred-table tr:not(:first-child){animation:rowIn .25s ease-out;}
 @media(max-width:768px){.g4{grid-template-columns:1fr 1fr;}.g3{grid-template-columns:1fr 1fr;}.g2{grid-template-columns:1fr;}.vkpis{grid-template-columns:1fr 1fr;}.gauge-grid{grid-template-columns:1fr 1fr;}table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}}.page{overflow-x:hidden;}@media(max-width:768px) and (orientation:portrait){.tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;}.tab{white-space:nowrap;flex-shrink:0;}.pi{overflow-x:auto;-webkit-overflow-scrolling:touch;}}@media(max-width:480px){.page img:first-child{max-height:160px;min-height:110px;object-position:center 20%;}}
 </style>
 </head>
@@ -233,7 +242,7 @@ tr:hover td{background:#fafafa;}
 </div>
 </div></div>
 <div class="page" id="page-metas"><div class="pi"><div class="sec">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl">Dias restantes (J16 feriado)</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
-<div class="page" id="page-vendedores"><div class="pi"><div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">Desempeno individual &#8212; Clic en fila para ver detalle <span id="vend-total-clientes-badge" style="font-size:11px;font-weight:700;background:#EFF4FF;color:#1F4E79;padding:4px 10px;border-radius:12px;"></span></div><div class="vend-grid"><table id="tv"></table><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div>
+<div class="page" id="page-vendedores"><div class="pi"><div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">Desempeno individual &#8212; Clic en fila para ver detalle <span id="vend-total-clientes-badge" style="font-size:11px;font-weight:700;background:#EFF4FF;color:#1F4E79;padding:4px 10px;border-radius:12px;"></span></div><div class="vend-grid"><div style="max-height:420px;overflow-y:auto;border-radius:8px;"><table id="tv"></table></div><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div>
 
 <div class="sec" style="margin-top:18px;">Evoluci&#243;n de clientes concretados &#8212; Mayo a Julio</div>
 <div style="background:#EFF4FF;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#1F4E79;">
@@ -244,9 +253,9 @@ tr:hover td{background:#fafafa;}
 
 <div id="vcs"></div></div></div>
 <div class="page" id="page-clientes"><div class="pi"><div class="sec">Por vendedor y cliente &#8212; Clic para expandir productos</div><div class="fbtns" id="fb-v"></div><input class="sb" id="sb-c" placeholder="Buscar cliente..."><table id="tc"></table></div></div>
-<div class="page" id="page-categorias"><div class="pi"><div class="sec">Mix por categoria</div><div class="fbtns" id="fb-cat-v"><button class="fbtn on" data-n="Todos" onclick="selCat('Todos',this)">Sucursal</button></div><div class="cat-grid"><div><div class="card" style="padding:14px;"><canvas id="c3" height="300"></canvas></div></div><div><table id="tcat"></table></div></div>
+<div class="page" id="page-categorias"><div class="pi"><div class="sec">Mix por categoria</div><div class="fbtns" id="fb-cat-v"><button class="fbtn on" data-n="Todos" onclick="selCat('Todos',this)">Sucursal</button></div><div class="cat-grid"><div><div class="card" style="padding:14px;"><div style="position:relative;height:300px;width:100%;"><canvas id="c3"></canvas></div></div></div><div><table id="tcat"></table></div></div>
 <div class="sec" style="margin-top:18px;">Apertura G2 &#8212; <span id="g2-titulo">Sucursal Antofagasta</span></div>
-<div class="card" style="padding:10px;"><canvas id="c-g2" height="170"></canvas></div>
+<div class="card" style="padding:10px;"><div style="position:relative;height:170px;width:100%;"><canvas id="c-g2"></canvas></div></div>
 
 <div class="sec" style="margin-top:18px;">Buscar producto por c&#243;digo o nombre</div>
 <div class="card" style="padding:12px;">
@@ -307,14 +316,14 @@ tr:hover td{background:#fafafa;}
 <div id="cred-empty" style="text-align:center;padding:40px;color:#888;font-size:12px;">
   No hay solicitudes a&#250;n. Ingresa solicitudes desde la pesta&#241;a <strong>Administraci&#243;n</strong>.
 </div>
-<table id="t-cred" style="display:none;font-size:11px;">
+<table id="t-cred" class="cred-table" style="display:none;font-size:11px;">
   <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th></tr>
 </table>
 <div class="sec" style="margin-top:18px;">Resueltas &#8212; Rechazadas y Autorizadas</div>
 <div id="cred-resueltas-empty" style="text-align:center;padding:24px;color:#888;font-size:12px;">
   A&#250;n no hay solicitudes resueltas.
 </div>
-<table id="t-cred-resueltas" style="display:none;font-size:11px;">
+<table id="t-cred-resueltas" class="cred-table" style="display:none;font-size:11px;">
   <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th></tr>
 </table>
 </div></div>
@@ -1556,7 +1565,7 @@ document.addEventListener('DOMContentLoaded',function(){
     +'<tr><td><strong>Resultado Op.</strong></td><td><strong>$'+k.meta_ro+'M</strong></td><td style="color:'+( k.avance_ro>=100?'#375623':'#C00000')+';font-weight:700">$'+k.ro+'M</td><td><span class="badge '+(k.avance_ro>=100?'bg':'ba')+'">'+k.avance_ro+'%</span></td></tr>';
 
   // Tabla vendedores
-  var vtr='<tr><th>Vendedor</th><th>Facturacion</th><th>Kilos</th><th>Margen $</th><th>Margen %</th><th>Part. %</th><th>Clientes</th></tr>';
+  var vtr='<tr style="position:sticky;top:0;z-index:2;background:#333;"><th>Vendedor</th><th>Facturacion</th><th>Kilos</th><th>Margen $</th><th>Margen %</th><th>Part. %</th><th>Clientes</th></tr>';
   var vendTotalFact=D.vendedores.reduce(function(s,v){return s+v.fact;},0)||1;
   var vendTotalCli=D.vendedores.reduce(function(s,v){return s+(v.n_cli||0);},0);
   var vendSorted=D.vendedores.slice().sort(function(a,b){return b.fact-a.fact;});
@@ -1572,7 +1581,7 @@ document.addEventListener('DOMContentLoaded',function(){
       +'<td>'+partPct+'%</td>'
       +'<td style="text-align:center;font-weight:700">'+(v.n_cli||0)+'</td></tr>';
   });
-  vtr+='<tr style="background:#1F1F1F;color:#fff;font-weight:700;">'
+  vtr+='<tr style="background:#1F1F1F;color:#fff;font-weight:700;position:sticky;bottom:0;z-index:2;">'
     +'<td>TOTAL SUCURSAL</td><td>$'+D.kpis.fact+'M</td><td>'+Number(D.kpis.kg).toLocaleString('es-CL')+' Kg</td>'
     +'<td>$'+D.kpis.margen+'M</td><td>'+D.kpis.margen_pct+'%</td><td>100%</td>'
     +'<td style="text-align:center">'+vendTotalCli+'</td></tr>';
@@ -1761,6 +1770,7 @@ document.addEventListener('DOMContentLoaded',function(){
         +'<span style="font-size:11px;font-weight:600;color:#333;">'+lbl+' <span style="color:#7030A0;">&#9662;</span></span>'
         +'<span style="font-size:9px;color:#aaa;white-space:nowrap;">Meta '+mtxt+'</span></div>'
         +'<div class="bar" style="height:5px;"><div class="bf" style="width:'+Math.min(pct,100)+'%;background:'+bc(pct)+'"></div></div>'
+        +'<div style="font-size:9px;color:#aaa;margin-top:2px;">Considera tambi\u00e9n clientes nuevos, no solo recuperados.</div>'
         +'</div>'
         +'<div style="text-align:right;min-width:54px;flex-shrink:0;">'
         +'<div style="font-size:13px;font-weight:800;color:'+bc(pct)+';line-height:1.1;">'+av+'</div>'
