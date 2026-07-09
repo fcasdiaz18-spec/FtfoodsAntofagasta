@@ -117,8 +117,7 @@ tr:hover td{background:#fafafa;}
 .vend-grid{display:grid;grid-template-columns:1fr 400px;gap:16px;align-items:start;margin-bottom:14px;}
 @media(max-width:900px){.vend-grid{grid-template-columns:1fr 320px;}}
 @media(max-width:768px){.vend-grid{grid-template-columns:1fr;}}
-.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-bottom:12px;}
-.cat-grid .card{height:100%;display:flex;flex-direction:column;}
+.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:12px;}
 @media(max-width:768px){.cat-grid{grid-template-columns:1fr;}}
 .ops-grid{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start;margin-bottom:8px;}
 @media(max-width:768px){.ops-grid{grid-template-columns:1fr;}}
@@ -233,9 +232,16 @@ tr:hover td{background:#fafafa;}
 <div class="page" id="page-metas"><div class="pi"><div class="sec">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl">Dias restantes (J16 feriado)</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
 <div class="page" id="page-vendedores"><div class="pi"><div class="sec">Desempeno individual &#8212; Clic en fila para ver detalle</div><div class="vend-grid"><table id="tv"></table><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div><div id="vcs"></div></div></div>
 <div class="page" id="page-clientes"><div class="pi"><div class="sec">Por vendedor y cliente &#8212; Clic para expandir productos</div><div class="fbtns" id="fb-v"></div><input class="sb" id="sb-c" placeholder="Buscar cliente..."><table id="tc"></table></div></div>
-<div class="page" id="page-categorias"><div class="pi"><div class="sec">Mix por categoria</div><div class="fbtns" id="fb-cat-v"><button class="fbtn on" data-n="Todos" onclick="selCat('Todos',this)">Sucursal</button></div><div class="cat-grid"><div><div class="card" style="padding:14px;"><canvas id="c3" height="440"></canvas></div></div><div><table id="tcat"></table></div></div>
+<div class="page" id="page-categorias"><div class="pi"><div class="sec">Mix por categoria</div><div class="fbtns" id="fb-cat-v"><button class="fbtn on" data-n="Todos" onclick="selCat('Todos',this)">Sucursal</button></div><div class="cat-grid"><div><div class="card" style="padding:14px;"><canvas id="c3" height="300"></canvas></div></div><div><table id="tcat"></table></div></div>
 <div class="sec" style="margin-top:18px;">Apertura G2 &#8212; <span id="g2-titulo">Sucursal Antofagasta</span></div>
-<div class="card" style="padding:10px;"><canvas id="c-g2" height="260"></canvas></div>
+<div class="card" style="padding:10px;"><canvas id="c-g2" height="220"></canvas></div>
+
+<div class="sec" style="margin-top:18px;">Buscar producto por c&#243;digo o nombre</div>
+<div class="card" style="padding:12px;">
+  <input class="sb" id="sb-prod-cat" placeholder="Ej: 67722 o Abastero..." style="width:100%;margin-bottom:10px;" oninput="buscarProductoCat()">
+  <div id="prod-cat-empty" style="text-align:center;padding:16px;color:#888;font-size:11px;">Escribe un c&#243;digo o nombre de producto para buscarlo en todas las ventas del mes.</div>
+  <table id="prod-cat-tabla" style="font-size:11px;display:none;"></table>
+</div>
 </div></div>
 <div class="page" id="page-stock"><div class="pi"><div class="sec">Stock disponible &#8212; 08-07-2026</div><div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;"><input class="sb" id="sb-s" placeholder="Buscar..." style="flex:1;min-width:180px;margin:0"><button class="fbtn" id="fs-u" onclick="filtS('u')" style="color:#C00000;font-weight:700;">&#9888; Urgente</button><button class="fbtn" id="fs-r" onclick="filtS('r')">Critico</button><button class="fbtn" id="fs-y" onclick="filtS('y')">Alerta</button><button class="fbtn" id="fs-g" onclick="filtS('g')">OK</button><button class="fbtn on" id="fs-a" onclick="filtS('')">Todo</button></div><table id="ts"></table></div></div>
 <div class="page" id="page-precios"><div class="pi"><div class="sec">Lista de precios &#8212; Vigencia 29 Jun &#8212; 03 Jul 2026</div><div style="background:#FFF2CC;border:.5px solid #C9A227;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#7D6608;font-weight:600;">Precios netos $/Kg &#183; Verificar stock antes de ofrecer</div><input class="sb" id="sb-p" placeholder="Buscar producto..."><div id="precios"></div></div></div></div>
@@ -901,6 +907,44 @@ function buildCliTable(){
   document.getElementById('tc').innerHTML=h;
 }
 
+
+var prodCatIndex=null;
+function buildProdCatIndex(){
+  var idx={};
+  (D.clientes||[]).forEach(function(cl){
+    (cl.productos||[]).forEach(function(p){
+      if(!idx[p.cod]) idx[p.cod]={cod:p.cod,prod:p.prod,fact:0,mgnum:0,vendedores:{}};
+      var e=idx[p.cod];
+      e.fact+=p.fact;
+      e.mgnum+=p.fact*p.mg;
+      e.vendedores[cl.vend]=(e.vendedores[cl.vend]||0)+p.fact;
+    });
+  });
+  prodCatIndex=Object.keys(idx).map(function(k){return idx[k];});
+}
+function buscarProductoCat(){
+  if(!prodCatIndex) buildProdCatIndex();
+  var q=(document.getElementById('sb-prod-cat').value||'').trim().toLowerCase();
+  var empty=document.getElementById('prod-cat-empty');
+  var tbl=document.getElementById('prod-cat-tabla');
+  if(!q){ empty.style.display='block'; empty.textContent='Escribe un c\u00f3digo o nombre de producto para buscarlo en todas las ventas del mes.'; tbl.style.display='none'; return; }
+  var res=prodCatIndex.filter(function(p){
+    return String(p.cod).toLowerCase().indexOf(q)>-1 || p.prod.toLowerCase().indexOf(q)>-1;
+  }).sort(function(a,b){return b.fact-a.fact;}).slice(0,30);
+  if(!res.length){ empty.style.display='block'; empty.textContent='Sin resultados para "'+q+'".'; tbl.style.display='none'; return; }
+  empty.style.display='none'; tbl.style.display='';
+  var h='<tr><th>C\u00f3digo</th><th>Producto</th><th style="text-align:right">Fact.</th><th style="text-align:right">Margen %</th><th>Vendedores</th></tr>';
+  res.forEach(function(p){
+    var mg=p.fact?Math.round(p.mgnum/p.fact*10)/10:0;
+    var vends=Object.keys(p.vendedores).sort(function(a,b){return p.vendedores[b]-p.vendedores[a];})
+      .map(function(v){return v+' ($'+p.vendedores[v].toFixed(2)+'M)';}).join(', ');
+    h+='<tr><td style="font-family:monospace;font-size:10px">'+p.cod+'</td><td><strong>'+p.prod+'</strong></td>'
+      +'<td style="text-align:right;font-weight:700">$'+p.fact.toFixed(2)+'M</td>'
+      +'<td style="text-align:right">'+mg+'%</td>'
+      +'<td style="font-size:10px;color:#666">'+vends+'</td></tr>';
+  });
+  tbl.innerHTML=h;
+}
 
 function selCat(n,el){
   document.querySelectorAll('#fb-cat-v .fbtn').forEach(function(b){b.classList.remove('on');});
