@@ -436,8 +436,8 @@ tr:hover td{background:#fafafa;}
 </div></div>
 <div class="page" id="page-logistica"><div class="pi">
 <div class="sec">&#128666; Log&#237;stica &#8212; Kilos cargados por ruta</div>
-<div style="background:#EFF4FF;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#1F4E79;">
-  Seguimiento de kilos despachados por transporte y ruta. Objetivo: detectar desbalance entre <strong>Mavi</strong> y <strong>Assen</strong> y encontrar el punto de equilibrio semanal/quincenal.
+<div id="log-banner-msg" style="background:#EFF4FF;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#1F4E79;">
+  Seguimiento Kilos por Ruta
 </div>
 
 <div class="card" style="padding:16px;margin-bottom:16px;">
@@ -2088,6 +2088,12 @@ function updateRutasManual(){
 }
 
 function renderLogistica(){
+  var banner=document.getElementById('log-banner-msg');
+  if(banner){
+    banner.innerHTML = isAdmin
+      ? 'Seguimiento de kilos despachados por transporte y ruta. Objetivo: detectar desbalance entre <strong>Mavi</strong> y <strong>Assen</strong> y encontrar el punto de equilibrio semanal/quincenal.'
+      : 'Seguimiento Kilos por Ruta';
+  }
   if(!logisticaLoaded){
     loadLogisticaFromFirestore();
   }else{
