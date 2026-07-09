@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 var firebaseConfig={
   apiKey:"AIzaSyBd0hyGeYZmhSmEw9dfPKsHx3Wb5JBuQ6U",
@@ -141,10 +142,11 @@ tr:hover td{background:#fafafa;}
     <input type="password" id="lg-pass" class="lg-input" placeholder="Contrase&#241;a" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="lg-btn" id="lg-btn" onclick="doLogin()">Ingresar</button>
     <div class="lg-err" id="lg-err"></div>
-    <div style="font-size:10px;color:#bbb;margin-top:16px;">&#191;No tienes acceso? Solicita una cuenta a tu jefe de sucursal.</div>
+    <div style="margin-top:10px;"><a href="#" onclick="solicitarRecuperacion();return false;" style="font-size:11px;color:#9C1C1C;text-decoration:underline;">&#191;Olvidaste tu contrase&#241;a?</a></div>
+    <div style="font-size:10px;color:#bbb;margin-top:12px;">&#191;No tienes acceso? Solicita una cuenta a tu jefe de sucursal.</div>
   </div>
 </div>
-<div class="nav"><div class="logo"><img src="data:image/jpeg;base64,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" alt="FT Foods" style="height:36px;width:auto;object-fit:contain;"><span style="color:#fff;font-size:12px;font-weight:600;white-space:nowrap;">Antofagasta</span></div><div class="tabs-wrap"><div class="tabs"><div class="tab on" onclick="go('inicio',this)">&#127968; Inicio</div><div class="tab" onclick="go('metas',this)">&#128202; Metas</div><div class="tab" onclick="go('vendedores',this)">&#128101; Vendedores</div><div class="tab" onclick="go('clientes',this)">&#127978; Clientes</div><div class="tab" onclick="go('categorias',this)">&#128230; Categor&#237;as</div><div class="tab" onclick="go('stock',this)">&#128203; Stock</div><div class="tab" onclick="go('precios',this)">&#128178; Precios</div><div class="tab" onclick="go('bono',this)">&#127919; Bono</div><div class="tab" onclick="go('creditos',this)">&#128221; Creditos</div><div class="tab" onclick="goAdmin()">&#9965;&#65039; Administraci&#243;n</div><div class="tab" onclick="goOps()">&#128274; Ops</div><div class="tab" onclick="goHist()">&#128340; Hist&#243;rico</div><div class="tab" id="tab-seguridad" onclick="goSec()" style="display:none;">&#128272; Seguridad</div></div></div><span id="user-badge" style="font-size:10px;color:#fff;opacity:.85;margin-left:auto;padding-right:8px;white-space:nowrap;"></span><button class="fsb" id="fsb" onclick="toggleFS()">&#9956;</button><button class="fsb" id="logout-btn" onclick="doLogout()" title="Cerrar sesi&#243;n" style="margin-left:4px;">&#128274;</button></div>
+<div class="nav"><div class="logo"><img src="data:image/jpeg;base64,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" alt="FT Foods" style="height:36px;width:auto;object-fit:contain;"><span style="color:#fff;font-size:12px;font-weight:600;white-space:nowrap;">Antofagasta</span></div><div class="tabs-wrap"><div class="tabs"><div class="tab on" onclick="go('inicio',this)">&#127968; Inicio</div><div class="tab" onclick="go('metas',this)">&#128202; Metas</div><div class="tab" onclick="go('vendedores',this)">&#128101; Vendedores</div><div class="tab" onclick="go('clientes',this)">&#127978; Clientes</div><div class="tab" onclick="go('categorias',this)">&#128230; Categor&#237;as</div><div class="tab" onclick="go('stock',this)">&#128203; Stock</div><div class="tab" onclick="go('precios',this)">&#128178; Precios</div><div class="tab" onclick="go('bono',this)">&#127919; Bono</div><div class="tab" onclick="go('creditos',this)">&#128221; Creditos</div><div class="tab" onclick="goAdmin()">&#9965;&#65039; Administraci&#243;n</div><div class="tab" onclick="goOps()">&#128274; Ops</div><div class="tab" id="tab-logistica" onclick="goLog()" style="display:none;">&#128666; Log&#237;stica</div><div class="tab" onclick="goHist()">&#128340; Hist&#243;rico</div><div class="tab" id="tab-seguridad" onclick="goSec()" style="display:none;">&#128272; Seguridad</div></div></div><span id="user-badge" style="font-size:10px;color:#fff;opacity:.85;margin-left:auto;padding-right:8px;white-space:nowrap;"></span><button class="fsb" id="fsb" onclick="toggleFS()">&#9956;</button><button class="fsb" id="logout-btn" onclick="doLogout()" title="Cerrar sesi&#243;n" style="margin-left:4px;">&#128274;</button></div>
 <div class="md" id="md"><div class="mdbox"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><strong id="md-t" style="font-size:14px;"></strong><button onclick="closeMd()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#888;">&#10005;</button></div><div id="md-b"></div></div></div>
 <div class="ol" id="ol"><div class="ob"><div style="font-size:40px;">&#128274;</div><div style="font-size:17px;font-weight:700;margin-top:8px;">Area de Operaciones</div><div style="font-size:12px;color:#888;margin-top:4px;">Solo personal autorizado</div><input class="oi" type="password" id="opsp" placeholder="Ingresa la clave" onkeydown="if(event.key==='Enter')chkOps()"><button class="obt" onclick="chkOps()">Acceder</button><div class="oe" id="ope">Clave incorrecta.</div><div style="margin-top:10px;"><button onclick="document.getElementById('ol').classList.remove('on')" style="background:none;border:none;color:#888;font-size:12px;cursor:pointer;">Cancelar</button></div></div></div>
 <div class="ol" id="ol2"><div class="ob"><div style="font-size:40px;">&#128272;</div><div style="font-size:17px;font-weight:700;margin-top:8px;">Seguridad y Accesos</div><div style="font-size:12px;color:#888;margin-top:4px;">Solo Felipe Castillo</div><input class="oi" type="password" id="secp" placeholder="Ingresa la clave" onkeydown="if(event.key==='Enter')chkSec()"><button class="obt" onclick="chkSec()">Acceder</button><div class="oe" id="sece">Clave incorrecta.</div><div style="margin-top:10px;"><button onclick="document.getElementById('ol2').classList.remove('on')" style="background:none;border:none;color:#888;font-size:12px;cursor:pointer;">Cancelar</button></div></div></div>
@@ -432,6 +434,103 @@ tr:hover td{background:#fafafa;}
 <table id="tom" style="font-size:11px;"></table>
 
 </div></div>
+<div class="page" id="page-logistica"><div class="pi">
+<div class="sec">&#128666; Log&#237;stica &#8212; Kilos cargados por ruta</div>
+<div style="background:#EFF4FF;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#1F4E79;">
+  Seguimiento de kilos despachados por transporte y ruta. Objetivo: detectar desbalance entre <strong>Mavi</strong> y <strong>Assen</strong> y encontrar el punto de equilibrio semanal/quincenal.
+</div>
+
+<div class="card" style="padding:16px;margin-bottom:16px;">
+  <div style="font-weight:700;font-size:13px;margin-bottom:10px;">&#128228; Cargar datos desde archivo SAP</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+    <input type="file" id="log-file" accept=".xlsx,.xls,.csv,.txt,.pdf" style="font-size:12px;flex:1;min-width:200px;">
+    <select id="log-file-transporte" style="padding:7px 10px;border-radius:6px;border:.5px solid #ddd;font-size:12px;">
+      <option value="">Detectar transporte automaticamente</option>
+      <option value="Mavi">Forzar: Mavi</option>
+      <option value="Assen">Forzar: Assen</option>
+    </select>
+    <button onclick="procesarArchivoLog()" style="padding:8px 16px;border:none;border-radius:6px;background:#9C1C1C;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Procesar archivo</button>
+  </div>
+  <div id="log-file-status" style="font-size:11px;color:#888;"></div>
+  <div style="display:flex;gap:8px;margin-top:10px;border-top:.5px solid #eee;padding-top:10px;">
+    <button onclick="cargarDatosEjemplo()" style="padding:6px 12px;border:.5px solid #C9A227;border-radius:6px;background:#FFF8E7;color:#7D6608;font-size:11px;cursor:pointer;">&#129514; Cargar datos de ejemplo</button>
+    <button onclick="borrarDatosEjemplo()" style="padding:6px 12px;border:.5px solid #C00000;border-radius:6px;background:#fff;color:#C00000;font-size:11px;cursor:pointer;">&#128465; Borrar datos de ejemplo</button>
+    <span style="font-size:10px;color:#aaa;align-self:center;">Los datos de ejemplo quedan marcados aparte y no se mezclan con cargas reales.</span>
+  </div>
+  <div id="log-preview-box" style="display:none;margin-top:12px;">
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px;">Vista previa &#8212; revisa antes de guardar</div>
+    <div style="max-height:260px;overflow:auto;border:.5px solid #eee;border-radius:6px;">
+      <table id="log-preview-table" style="font-size:11px;width:100%;"></table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button onclick="confirmarGuardarLog()" style="padding:8px 16px;border:none;border-radius:6px;background:#375623;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">&#10003; Confirmar y guardar</button>
+      <button onclick="cancelarPreviewLog()" style="padding:8px 16px;border:.5px solid #ccc;border-radius:6px;background:#fff;color:#555;font-size:12px;cursor:pointer;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="padding:16px;margin-bottom:16px;">
+  <div style="font-weight:700;font-size:13px;margin-bottom:10px;cursor:pointer;" onclick="toggleManualLog()">&#9998; Ingreso manual <span id="log-manual-arrow">&#9660;</span></div>
+  <div id="log-manual-box" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px;">
+      <div><label style="font-size:10px;color:#888;">Fecha</label><input type="date" id="log-m-fecha" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"></div>
+      <div><label style="font-size:10px;color:#888;">Transporte</label><select id="log-m-transporte" onchange="updateRutasManual()" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"><option value="Mavi">Mavi</option><option value="Assen">Assen</option></select></div>
+      <div><label style="font-size:10px;color:#888;">Ruta</label><select id="log-m-ruta" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"></select></div>
+      <div><label style="font-size:10px;color:#888;">Kilos</label><input type="number" id="log-m-kilos" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"></div>
+      <div><label style="font-size:10px;color:#888;">Cajas (opcional)</label><input type="number" id="log-m-cajas" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"></div>
+    </div>
+    <button onclick="agregarManualLog()" style="padding:8px 16px;border:none;border-radius:6px;background:#1F4E79;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Agregar registro</button>
+  </div>
+</div>
+
+<div class="fbtns" id="log-periodo-btns" style="margin-bottom:10px;">
+  <button class="fbtn" data-p="dia" onclick="setPeriodoLog('dia',this)">Hoy</button>
+  <button class="fbtn on" data-p="semana" onclick="setPeriodoLog('semana',this)">Esta semana</button>
+  <button class="fbtn" data-p="quincena" onclick="setPeriodoLog('quincena',this)">Quincena</button>
+  <button class="fbtn" data-p="mes" onclick="setPeriodoLog('mes',this)">Este mes</button>
+  <button class="fbtn" data-p="anio" onclick="setPeriodoLog('anio',this)">Este a&#241;o</button>
+  <button class="fbtn" data-p="todo" onclick="setPeriodoLog('todo',this)">Todo</button>
+</div>
+
+<div id="log-empty" style="text-align:center;padding:40px;color:#888;font-size:12px;">Sin registros cargados todav&#237;a. Sube un archivo o agrega un registro manual arriba.</div>
+
+<div id="log-dashboard" style="display:none;">
+  <div class="ops-kpis" id="log-kpis" style="grid-template-columns:repeat(4,1fr);"></div>
+
+  <div class="ops-grid" style="grid-template-columns:1fr 1fr;margin-top:8px;">
+    <div class="card" style="padding:14px;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Kg por transporte en el periodo</div>
+      <canvas id="log-c-donut" height="220"></canvas>
+    </div>
+    <div class="card" style="padding:14px;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Evoluci&#243;n diaria &#8212; Mavi vs Assen</div>
+      <canvas id="log-c-bars" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="sec" style="margin-top:18px;">Balance semanal / quincenal</div>
+  <div id="log-balance-box" style="margin-bottom:14px;"></div>
+
+  <div class="sec" style="margin-top:22px;color:#7030A0;">&#9878;&#65039; Balance Ruta Local &#8212; Mavi vs Assen <span style="font-weight:400;color:#888;font-size:11px;">el foco principal de equilibrio</span></div>
+  <div id="log-ruta-local-box" style="margin-bottom:16px;"></div>
+
+  <div class="sec" style="margin-top:18px;">Otras rutas <span style="font-weight:400;color:#888;font-size:11px;">aisladas por comuna, sin comparativo cruzado</span></div>
+  <div id="log-otras-rutas-box" class="ops-kpis" style="grid-template-columns:repeat(5,1fr);margin-bottom:8px;"></div>
+
+  <div id="log-ai-box" style="display:none;margin-top:18px;">
+    <div class="sec" style="color:#7030A0;">&#10024; Insights (solo administrador)</div>
+    <div id="log-ai-content" style="background:#F5F0FA;border:.5px solid #7030A0;border-radius:8px;padding:14px;font-size:12px;color:#4A2E6B;line-height:1.6;"></div>
+  </div>
+
+  <div class="sec" style="margin-top:18px;">Historial de registros</div>
+  <div style="display:flex;gap:6px;margin-bottom:8px;">
+    <input class="sb" id="log-search" placeholder="Buscar..." style="flex:1;margin:0" oninput="renderLogTabla()">
+    <button onclick="expLogCSV()" style="padding:5px 10px;border-radius:6px;border:none;background:#1F1F1F;color:#fff;font-size:11px;cursor:pointer;">CSV</button>
+  </div>
+  <table id="log-tabla-full" style="font-size:11px;"></table>
+</div>
+
+</div></div>
 <div class="page" id="page-historico"><div class="pi">
 <div class="sec">&#128340; Hist&#243;rico &#8212; Meses anteriores</div>
 <div style="background:#EFF4FF;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#1F4E79;">Resumen de KPIs y vendedores por mes cerrado. Acceso restringido (misma clave de OPS/Administraci&#243;n).</div>
@@ -446,6 +545,11 @@ tr:hover td{background:#fafafa;}
 <div id="acc-empty" style="text-align:center;padding:40px;color:#888;font-size:12px;">Cargando registro de accesos...</div>
 <table id="t-accesos" style="display:none;font-size:11px;">
   <tr><th>Usuario</th><th>Fecha</th><th>Hora</th><th>Dispositivo</th><th>Navegador</th><th>Pantalla</th></tr>
+</table>
+<div class="sec" style="margin-top:20px;">&#128273; Solicitudes de recuperaci&#243;n de clave</div>
+<div id="rec-empty" style="text-align:center;padding:24px;color:#888;font-size:12px;">Sin solicitudes registradas.</div>
+<table id="t-recuperaciones" style="display:none;font-size:11px;">
+  <tr><th>Correo</th><th>Fecha solicitud</th><th>Estado</th></tr>
 </table>
 </div></div>
 <script>
@@ -474,6 +578,7 @@ function go(n,el){
   if(n==='admin') renderAdmin();
   if(n==='historico') renderHist();
   if(n==='seguridad') renderAccesos();
+  if(n==='logistica') renderLogistica();
 }
 function goAdmin(){
   if(opsOk){go('admin',document.querySelectorAll('.tab')[9]);renderAdmin();return;}
@@ -489,12 +594,38 @@ function goOps(){
   setTimeout(function(){document.getElementById('opsp').focus();},100);
 }
 function goHist(){
-  if(opsOk){go('historico',document.querySelectorAll('.tab')[11]);renderHist();return;}
+  if(opsOk){go('historico',document.querySelectorAll('.tab')[12]);renderHist();return;}
   pendingPage='historico';
   document.getElementById('ol').classList.add('on');
   setTimeout(function(){document.getElementById('opsp').focus();},100);
 }
+function goLog(){
+  if(opsOk){go('logistica',document.querySelectorAll('.tab')[11]);renderLogistica();return;}
+  pendingPage='logistica';
+  document.getElementById('ol').classList.add('on');
+  setTimeout(function(){document.getElementById('opsp').focus();},100);
+}
 var secOk=false;
+function solicitarRecuperacion(){
+  var email=(document.getElementById('lg-email').value||'').trim();
+  if(!email){
+    email=prompt('Ingresa tu correo para solicitar la recuperaci\u00f3n de clave:')||'';
+    email=email.trim();
+  }
+  if(!email){ return; }
+  var fecha=new Date().toLocaleString('es-CL');
+  var asunto=encodeURIComponent('Solicitud de recuperaci\u00f3n de clave - Panel FT Foods');
+  var cuerpo=encodeURIComponent('El usuario '+email+' est\u00e1 solicitando recuperar su clave de acceso al panel de ventas.\n\nFecha de solicitud: '+fecha+'\n\n(Este correo se genera autom\u00e1ticamente al hacer clic en "\u00bfOlvidaste tu contrase\u00f1a?" en la pantalla de acceso.)');
+  window.location.href='mailto:felipe.castillo@ftfoods.cl?subject='+asunto+'&body='+cuerpo;
+  try{
+    if(fsDB){
+      fsDB.collection('recuperacion_solicitudes').add({
+        email:email, fecha_solicitud:fecha, ts:Date.now(), atendida:false
+      }).catch(function(e){ console.warn('No se pudo registrar la solicitud (normal si a\u00fan no inicias sesi\u00f3n):',e); });
+    }
+  }catch(e){}
+  alert('Se abri\u00f3 tu programa de correo con la solicitud lista para enviar a felipe.castillo@ftfoods.cl. Si no se abre autom\u00e1ticamente, escr\u00edbele directo indicando tu correo: '+email);
+}
 function doLogin(){
   var email=document.getElementById('lg-email').value.trim();
   var pass=document.getElementById('lg-pass').value;
@@ -518,29 +649,37 @@ function doLogout(){
   if(fsAuth) fsAuth.signOut();
 }
 var ADMIN_EMAILS=['felipe.castillo@ftfoods.cl'];
+var LOGISTICA_EMAILS=['marcela.cordero@ftfoods.cl','katherine.merino@ftfoods.cl','felipe.castillo@ftfoods.cl'];
 var isAdmin=false;
+var isLogistica=false;
+var currentUserEmail='';
 if(fsAuth){
   fsAuth.onAuthStateChanged(function(user){
     if(user){
       document.body.classList.remove('locked');
       document.getElementById('lg-email').value='';
       document.getElementById('lg-pass').value='';
-      isAdmin=ADMIN_EMAILS.indexOf((user.email||'').toLowerCase())!==-1;
+      currentUserEmail=(user.email||'').toLowerCase();
+      isAdmin=ADMIN_EMAILS.indexOf(currentUserEmail)!==-1;
+      isLogistica=LOGISTICA_EMAILS.indexOf(currentUserEmail)!==-1;
       if(isAdmin){ opsOk=true; secOk=true; }
       var tabSec=document.getElementById('tab-seguridad');
       if(tabSec) tabSec.style.display=isAdmin?'':'none';
+      var tabLog=document.getElementById('tab-logistica');
+      if(tabLog) tabLog.style.display=isLogistica?'':'none';
       var ub=document.getElementById('user-badge');
       if(ub) ub.textContent=(isAdmin?'\u2605 Administrador \u00b7 ':'')+(user.email||'');
       logAcceso(user);
     }else{
       document.body.classList.add('locked');
       isAdmin=false;
+      isLogistica=false;
     }
   });
 }
 
 function goSec(){
-  if(secOk){go('seguridad',document.querySelectorAll('.tab')[12]);renderAccesos();return;}
+  if(secOk){go('seguridad',document.querySelectorAll('.tab')[13]);renderAccesos();return;}
   document.getElementById('ol2').classList.add('on');
   setTimeout(function(){document.getElementById('secp').focus();},100);
 }
@@ -550,7 +689,7 @@ function chkSec(){
     document.getElementById('ol2').classList.remove('on');
     document.getElementById('secp').value='';
     document.getElementById('sece').style.display='none';
-    go('seguridad',document.querySelectorAll('.tab')[12]);
+    go('seguridad',document.querySelectorAll('.tab')[13]);
     renderAccesos();
   }else{
     document.getElementById('sece').style.display='block';
@@ -562,7 +701,8 @@ function chkOps(){
     document.getElementById('ol').classList.remove('on');
     document.getElementById('opsp').value='';
     if(pendingPage==='admin'){go('admin',document.querySelectorAll('.tab')[9]);renderAdmin();}
-    else if(pendingPage==='historico'){go('historico',document.querySelectorAll('.tab')[11]);renderHist();}
+    else if(pendingPage==='historico'){go('historico',document.querySelectorAll('.tab')[12]);renderHist();}
+    else if(pendingPage==='logistica'){go('logistica',document.querySelectorAll('.tab')[11]);renderLogistica();}
     else{go('ops',document.querySelectorAll('.tab')[10]);setTimeout(function(){buildOpsCharts();},50);}
     pendingPage='';
   } else {
@@ -1880,7 +2020,501 @@ function logAcceso(user){
     });
   }catch(e){}
 }
+// ===================== LOGISTICA =====================
+var TRANSPORTES={
+  Mavi:{nombre:'Transporte de Carga por Carretera Mavi',rutas:['Ruta Local','Tocopilla','Mejillones'],color:'#1F4E79'},
+  Assen:{nombre:'Servicios de Transporte Assen SPA',rutas:['Ruta Local','Varas Novillo + Cerdo','Iquique','Calama'],color:'#9C1C1C'}
+};
+var logisticaData=[];
+var logisticaLoaded=false;
+var pendingLogRows=[];
+var logPeriodo='semana';
+var logCharts={};
+
+function cargarDatosEjemplo(){
+  if(!fsDB){ alert('Sin conexi\u00f3n a la base de datos.'); return; }
+  if(!confirm('Esto agrega registros de EJEMPLO (no reales) para poder ver el dashboard funcionando. Qu\u00e9dan marcados aparte y los puedes borrar despu\u00e9s con el bot\u00f3n "Borrar datos de ejemplo". \u00bfContinuar?')) return;
+  var ejemplos=[
+    {fecha:'2026-07-01',transporte:'Mavi',ruta:'Mejillones',kilos:1500},
+    {fecha:'2026-07-03',transporte:'Mavi',ruta:'Mejillones',kilos:1650},
+    {fecha:'2026-07-06',transporte:'Mavi',ruta:'Mejillones',kilos:1800},
+    {fecha:'2026-06-30',transporte:'Mavi',ruta:'Tocopilla',kilos:2800},
+    {fecha:'2026-07-02',transporte:'Mavi',ruta:'Tocopilla',kilos:2000},
+    {fecha:'2026-07-07',transporte:'Mavi',ruta:'Tocopilla',kilos:3000},
+    {fecha:'2026-06-30',transporte:'Assen',ruta:'Iquique',kilos:6200},
+    {fecha:'2026-07-03',transporte:'Assen',ruta:'Iquique',kilos:8000},
+    {fecha:'2026-07-07',transporte:'Assen',ruta:'Iquique',kilos:10000},
+    {fecha:'2026-07-01',transporte:'Assen',ruta:'Calama',kilos:6500},
+    {fecha:'2026-07-06',transporte:'Assen',ruta:'Calama',kilos:7100},
+    {fecha:'2026-06-29',transporte:'Mavi',ruta:'Ruta Local',kilos:2000},
+    {fecha:'2026-07-02',transporte:'Mavi',ruta:'Ruta Local',kilos:2750},
+    {fecha:'2026-07-06',transporte:'Mavi',ruta:'Ruta Local',kilos:3500},
+    {fecha:'2026-06-29',transporte:'Assen',ruta:'Ruta Local',kilos:4000},
+    {fecha:'2026-07-03',transporte:'Assen',ruta:'Ruta Local',kilos:4500},
+    {fecha:'2026-07-07',transporte:'Assen',ruta:'Ruta Local',kilos:5000}
+  ];
+  var batch=fsDB.batch();
+  ejemplos.forEach(function(e){
+    var ref=fsDB.collection('logistica_cargas').doc();
+    batch.set(ref,{fecha:e.fecha,transporte:e.transporte,ruta:e.ruta,kilos:e.kilos,cajas:null,
+      origen:'ejemplo',archivo:null,subido_por:currentUserEmail,ts:Date.now()});
+  });
+  batch.commit().then(function(){
+    alert(ejemplos.length+' registros de ejemplo cargados.');
+  }).catch(function(e){ alert('Error: '+e.message); });
+}
+function borrarDatosEjemplo(){
+  if(!fsDB){ alert('Sin conexi\u00f3n a la base de datos.'); return; }
+  if(!confirm('\u00bfBorrar todos los registros marcados como EJEMPLO? Esto no afecta cargas reales.')) return;
+  fsDB.collection('logistica_cargas').where('origen','==','ejemplo').get().then(function(snap){
+    if(snap.empty){ alert('No hay datos de ejemplo para borrar.'); return; }
+    var batch=fsDB.batch();
+    snap.forEach(function(doc){ batch.delete(doc.ref); });
+    batch.commit().then(function(){ alert(snap.size+' registros de ejemplo eliminados.'); });
+  }).catch(function(e){ alert('Error: '+e.message); });
+}
+function toggleManualLog(){
+  var box=document.getElementById('log-manual-box');
+  var arrow=document.getElementById('log-manual-arrow');
+  var show=box.style.display==='none';
+  box.style.display=show?'':'none';
+  arrow.textContent=show?'\u25B2':'\u25BC';
+  if(show) updateRutasManual();
+}
+function updateRutasManual(){
+  var t=document.getElementById('log-m-transporte').value;
+  var sel=document.getElementById('log-m-ruta');
+  sel.innerHTML=TRANSPORTES[t].rutas.map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('');
+}
+
+function renderLogistica(){
+  if(!logisticaLoaded){
+    loadLogisticaFromFirestore();
+  }else{
+    renderLogDashboardWrap();
+  }
+  if(document.getElementById('log-m-ruta').innerHTML==='') updateRutasManual();
+}
+
+function loadLogisticaFromFirestore(){
+  if(!fsDB){ logisticaLoaded=true; renderLogDashboardWrap(); return; }
+  fsDB.collection('logistica_cargas').orderBy('fecha','desc').limit(3000).onSnapshot(function(snap){
+    logisticaData=[];
+    snap.forEach(function(doc){
+      var d=doc.data(); d._id=doc.id; logisticaData.push(d);
+    });
+    logisticaLoaded=true;
+    renderLogDashboardWrap();
+  },function(err){
+    console.warn('Error cargando logistica:',err);
+    logisticaLoaded=true;
+    renderLogDashboardWrap();
+  });
+}
+
+function agregarManualLog(){
+  var fecha=document.getElementById('log-m-fecha').value;
+  var transporte=document.getElementById('log-m-transporte').value;
+  var ruta=document.getElementById('log-m-ruta').value;
+  var kilos=parseFloat(document.getElementById('log-m-kilos').value);
+  var cajas=parseFloat(document.getElementById('log-m-cajas').value)||null;
+  if(!fecha||!kilos){ alert('Fecha y Kilos son obligatorios.'); return; }
+  var rec={fecha:fecha,transporte:transporte,ruta:ruta,kilos:kilos,cajas:cajas,
+    origen:'manual',archivo:null,subido_por:currentUserEmail,ts:Date.now()};
+  if(fsDB){
+    fsDB.collection('logistica_cargas').add(rec).then(function(){
+      document.getElementById('log-m-kilos').value='';
+      document.getElementById('log-m-cajas').value='';
+    }).catch(function(e){alert('Error guardando: '+e.message);});
+  }
+}
+
+// ---- Carga de archivo ----
+function procesarArchivoLog(){
+  var f=document.getElementById('log-file').files[0];
+  var status=document.getElementById('log-file-status');
+  if(!f){ status.textContent='Selecciona un archivo primero.'; return; }
+  var forced=document.getElementById('log-file-transporte').value;
+  var ext=f.name.split('.').pop().toLowerCase();
+  status.textContent='Procesando '+f.name+'...';
+
+  if(ext==='pdf'){
+    status.innerHTML='<span style="color:#C00000">La extracci\u00f3n autom\u00e1tica desde PDF todav\u00eda no est\u00e1 disponible. Exporta el reporte de SAP como Excel o CSV, o usa el ingreso manual arriba.</span>';
+    return;
+  }
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var rows;
+      if(ext==='xlsx'||ext==='xls'){
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+      }else{
+        var text=new TextDecoder('utf-8').decode(e.target.result);
+        var delim=text.indexOf('\t')>-1?'\t':(text.indexOf(';')>-1?';':',');
+        rows=text.split(/\r?\n/).filter(function(l){return l.trim();}).map(function(l){return l.split(delim);});
+      }
+      procesarFilasLog(rows,f.name,forced);
+    }catch(err){
+      status.innerHTML='<span style="color:#C00000">No se pudo leer el archivo: '+err.message+'</span>';
+    }
+  };
+  if(ext==='xlsx'||ext==='xls') reader.readAsArrayBuffer(f);
+  else reader.readAsArrayBuffer(f);
+}
+
+function normHeader(h){ return String(h||'').toLowerCase().trim(); }
+
+function procesarFilasLog(rows,filename,forcedTransporte){
+  var status=document.getElementById('log-file-status');
+  if(!rows||rows.length<2){ status.innerHTML='<span style="color:#C00000">El archivo no tiene filas de datos.</span>'; return; }
+  var header=rows[0].map(normHeader);
+  function findCol(keys){
+    for(var i=0;i<header.length;i++){ for(var k=0;k<keys.length;k++){ if(header[i].indexOf(keys[k])>-1) return i; } }
+    return -1;
+  }
+  var iFecha=findCol(['fecha']);
+  var iTransp=findCol(['transporte','transportista']);
+  var iRuta=findCol(['ruta']);
+  var iKilos=findCol(['kilo','kg','peso']);
+  var iCajas=findCol(['caja','bulto']);
+
+  var out=[];
+  for(var r=1;r<rows.length;r++){
+    var row=rows[r];
+    if(!row||row.every(function(c){return !String(c).trim();})) continue;
+    var fecha=iFecha>-1?parseFechaLog(row[iFecha]):'';
+    var transpRaw=iTransp>-1?String(row[iTransp]||''):'';
+    var transporte=forcedTransporte||detectarTransporte(transpRaw)||'';
+    var ruta=iRuta>-1?String(row[iRuta]||'').trim():'';
+    var kilos=iKilos>-1?parseFloat(String(row[iKilos]).replace(',','.'))||0:0;
+    var cajas=iCajas>-1?parseFloat(String(row[iCajas]).replace(',','.'))||null:null;
+    out.push({fecha:fecha,transporte:transporte,ruta:ruta,kilos:kilos,cajas:cajas});
+  }
+  if(!out.length){ status.innerHTML='<span style="color:#C00000">No se detectaron filas v\u00e1lidas.</span>'; return; }
+  pendingLogRows=out;
+  status.innerHTML='<span style="color:#375623">'+out.length+' filas detectadas. Revisa la vista previa antes de guardar.</span>';
+  renderPreviewLog();
+}
+
+function detectarTransporte(txt){
+  var t=(txt||'').toUpperCase();
+  if(t.indexOf('MAVI')>-1) return 'Mavi';
+  if(t.indexOf('ASSEN')>-1) return 'Assen';
+  return '';
+}
+function parseFechaLog(v){
+  if(!v) return '';
+  var s=String(v).trim();
+  var m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){ var y=m[3].length===2?'20'+m[3]:m[3]; return y+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0'); }
+  var m2=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m2) return m2[0];
+  return s;
+}
+
+function renderPreviewLog(){
+  var box=document.getElementById('log-preview-box');
+  box.style.display='';
+  var h='<tr><th>Fecha</th><th>Transporte</th><th>Ruta</th><th>Kilos</th><th>Cajas</th></tr>';
+  pendingLogRows.forEach(function(r,idx){
+    var transpOpts=Object.keys(TRANSPORTES).map(function(t){return '<option value="'+t+'"'+(r.transporte===t?' selected':'')+'>'+t+'</option>';}).join('');
+    var rutaOpts=(TRANSPORTES[r.transporte||'Mavi']||TRANSPORTES.Mavi).rutas.map(function(rt){return '<option value="'+rt+'"'+(r.ruta===rt?' selected':'')+'>'+rt+'</option>';}).join('');
+    h+='<tr>'
+      +'<td><input type="date" value="'+r.fecha+'" style="font-size:10px;width:110px;" onchange="pendingLogRows['+idx+'].fecha=this.value"></td>'
+      +'<td><select style="font-size:10px;" onchange="pendingLogRows['+idx+'].transporte=this.value;renderPreviewLog();">'+'<option value="">--</option>'+transpOpts+'</select></td>'
+      +'<td><select style="font-size:10px;" onchange="pendingLogRows['+idx+'].ruta=this.value">'+'<option value="">--</option>'+rutaOpts+'</select></td>'
+      +'<td><input type="number" value="'+r.kilos+'" style="font-size:10px;width:80px;" onchange="pendingLogRows['+idx+'].kilos=parseFloat(this.value)||0"></td>'
+      +'<td><input type="number" value="'+(r.cajas||'')+'" style="font-size:10px;width:70px;" onchange="pendingLogRows['+idx+'].cajas=parseFloat(this.value)||null"></td>'
+      +'</tr>';
+  });
+  document.getElementById('log-preview-table').innerHTML=h;
+}
+function cancelarPreviewLog(){
+  pendingLogRows=[];
+  document.getElementById('log-preview-box').style.display='none';
+  document.getElementById('log-file-status').textContent='';
+  document.getElementById('log-file').value='';
+}
+function confirmarGuardarLog(){
+  var invalid=pendingLogRows.filter(function(r){return !r.fecha||!r.transporte||!r.ruta||!r.kilos;});
+  if(invalid.length){
+    if(!confirm(invalid.length+' fila(s) tienen datos incompletos y no se guardar\u00e1n. \u00bfContinuar con el resto?')) return;
+  }
+  var valid=pendingLogRows.filter(function(r){return r.fecha&&r.transporte&&r.ruta&&r.kilos;});
+  if(!valid.length){ alert('No hay filas v\u00e1lidas para guardar.'); return; }
+  if(!fsDB){ alert('Sin conexi\u00f3n a la base de datos.'); return; }
+  var filename=document.getElementById('log-file').files[0]?document.getElementById('log-file').files[0].name:null;
+  var batch=fsDB.batch();
+  valid.forEach(function(r){
+    var ref=fsDB.collection('logistica_cargas').doc();
+    batch.set(ref,{fecha:r.fecha,transporte:r.transporte,ruta:r.ruta,kilos:r.kilos,cajas:r.cajas,
+      origen:'archivo',archivo:filename,subido_por:currentUserEmail,ts:Date.now()});
+  });
+  batch.commit().then(function(){
+    alert(valid.length+' registros guardados correctamente.');
+    cancelarPreviewLog();
+  }).catch(function(e){ alert('Error guardando: '+e.message); });
+}
+
+// ---- Filtros de periodo ----
+function setPeriodoLog(p,el){
+  logPeriodo=p;
+  document.querySelectorAll('#log-periodo-btns .fbtn').forEach(function(b){b.classList.remove('on');});
+  if(el) el.classList.add('on');
+  renderLogDashboardWrap();
+}
+function getRangoPeriodoLog(){
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var desde=new Date(hoy);
+  if(logPeriodo==='dia'){ /* desde=hoy */ }
+  else if(logPeriodo==='semana'){ var day=(hoy.getDay()+6)%7; desde.setDate(hoy.getDate()-day); }
+  else if(logPeriodo==='quincena'){ desde.setDate(hoy.getDate()-14); }
+  else if(logPeriodo==='mes'){ desde=new Date(hoy.getFullYear(),hoy.getMonth(),1); }
+  else if(logPeriodo==='anio'){ desde=new Date(hoy.getFullYear(),0,1); }
+  else if(logPeriodo==='todo'){ desde=new Date(2000,0,1); }
+  return {desde:desde.toISOString().slice(0,10), hasta:hoy.toISOString().slice(0,10)};
+}
+function getFilteredLogData(){
+  var r=getRangoPeriodoLog();
+  return logisticaData.filter(function(d){return d.fecha>=r.desde && d.fecha<=r.hasta;});
+}
+
+// ---- Dashboard ----
+function renderLogDashboardWrap(){
+  var empty=document.getElementById('log-empty');
+  var dash=document.getElementById('log-dashboard');
+  if(!logisticaData.length){
+    empty.style.display='block'; dash.style.display='none'; return;
+  }
+  empty.style.display='none'; dash.style.display='';
+  var data=getFilteredLogData();
+  renderLogKpis(data);
+  renderLogCharts(data);
+  renderLogBalance(data);
+  renderLogRutaLocal(data);
+  renderLogOtrasRutas(data);
+  renderLogTabla();
+  if(isAdmin) renderLogAI(data); else document.getElementById('log-ai-box').style.display='none';
+}
+
+function renderLogKpis(data){
+  var total=data.reduce(function(s,d){return s+d.kilos;},0);
+  var kgMavi=data.filter(function(d){return d.transporte==='Mavi';}).reduce(function(s,d){return s+d.kilos;},0);
+  var kgAssen=data.filter(function(d){return d.transporte==='Assen';}).reduce(function(s,d){return s+d.kilos;},0);
+  var desb=(kgMavi+kgAssen)>0?Math.abs(kgMavi-kgAssen)/(kgMavi+kgAssen)*100:0;
+  document.getElementById('log-kpis').innerHTML=
+    '<div class="card"><div class="lbl">Total Kg cargados</div><div class="val">'+Math.round(total).toLocaleString('es-CL')+' Kg</div></div>'
+    +'<div class="card" style="border-left:4px solid '+TRANSPORTES.Mavi.color+'"><div class="lbl">Mavi</div><div class="val" style="color:'+TRANSPORTES.Mavi.color+'">'+Math.round(kgMavi).toLocaleString('es-CL')+' Kg</div><div class="sub">'+(total?Math.round(kgMavi/total*100):0)+'% del total</div></div>'
+    +'<div class="card" style="border-left:4px solid '+TRANSPORTES.Assen.color+'"><div class="lbl">Assen</div><div class="val" style="color:'+TRANSPORTES.Assen.color+'">'+Math.round(kgAssen).toLocaleString('es-CL')+' Kg</div><div class="sub">'+(total?Math.round(kgAssen/total*100):0)+'% del total</div></div>'
+    +'<div class="card" style="background:'+(desb>20?'#FDECEC':'#E8F5E9')+'"><div class="lbl">Desbalance</div><div class="val" style="color:'+(desb>20?'#C00000':'#375623')+'">'+desb.toFixed(1)+'%</div><div class="sub">'+(desb>20?'Fuera de equilibrio':'Dentro de rango razonable')+'</div></div>';
+}
+
+function renderLogCharts(data){
+  var kgMavi=data.filter(function(d){return d.transporte==='Mavi';}).reduce(function(s,d){return s+d.kilos;},0);
+  var kgAssen=data.filter(function(d){return d.transporte==='Assen';}).reduce(function(s,d){return s+d.kilos;},0);
+  if(logCharts.donut) logCharts.donut.destroy();
+  logCharts.donut=new Chart(document.getElementById('log-c-donut'),{
+    type:'doughnut',
+    data:{labels:['Mavi','Assen'],datasets:[{data:[kgMavi,kgAssen],backgroundColor:[TRANSPORTES.Mavi.color,TRANSPORTES.Assen.color],borderColor:'#fff',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'bottom'}}}
+  });
+  // barras por dia
+  var porDia={};
+  data.forEach(function(d){
+    if(!porDia[d.fecha]) porDia[d.fecha]={Mavi:0,Assen:0};
+    porDia[d.fecha][d.transporte]=(porDia[d.fecha][d.transporte]||0)+d.kilos;
+  });
+  var fechas=Object.keys(porDia).sort();
+  if(logCharts.bars) logCharts.bars.destroy();
+  logCharts.bars=new Chart(document.getElementById('log-c-bars'),{
+    type:'bar',
+    data:{labels:fechas,datasets:[
+      {label:'Mavi',data:fechas.map(function(f){return porDia[f].Mavi||0;}),backgroundColor:TRANSPORTES.Mavi.color},
+      {label:'Assen',data:fechas.map(function(f){return porDia[f].Assen||0;}),backgroundColor:TRANSPORTES.Assen.color}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{x:{stacked:false},y:{beginAtZero:true}},plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+function renderLogBalance(data){
+  var hoy=new Date();
+  function sumaDesde(dias){
+    var d0=new Date(hoy); d0.setDate(hoy.getDate()-dias); var s0=d0.toISOString().slice(0,10);
+    var subset=logisticaData.filter(function(d){return d.fecha>=s0;});
+    var mavi=subset.filter(function(d){return d.transporte==='Mavi';}).reduce(function(s,d){return s+d.kilos;},0);
+    var assen=subset.filter(function(d){return d.transporte==='Assen';}).reduce(function(s,d){return s+d.kilos;},0);
+    return {mavi:mavi,assen:assen};
+  }
+  var sem=sumaDesde(7), quinc=sumaDesde(14);
+  function box(titulo,r){
+    var tot=r.mavi+r.assen;
+    var pMavi=tot?Math.round(r.mavi/tot*100):0, pAssen=tot?100-pMavi:0;
+    var desb=Math.abs(pMavi-pAssen);
+    var color=desb>20?'#C00000':desb>10?'#ED7D31':'#375623';
+    return '<div class="card" style="padding:12px;margin-bottom:8px;">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:6px;">'+titulo+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<div style="flex:1;height:18px;border-radius:9px;overflow:hidden;display:flex;">'
+      +'<div style="width:'+pMavi+'%;background:'+TRANSPORTES.Mavi.color+';"></div>'
+      +'<div style="width:'+pAssen+'%;background:'+TRANSPORTES.Assen.color+';"></div>'
+      +'</div><span style="font-size:11px;font-weight:700;color:'+color+';white-space:nowrap;">'+desb+'pts</span></div>'
+      +'<div style="font-size:10px;color:#666;margin-top:4px;">Mavi '+pMavi+'% ('+Math.round(r.mavi).toLocaleString('es-CL')+' Kg) &middot; Assen '+pAssen+'% ('+Math.round(r.assen).toLocaleString('es-CL')+' Kg)</div>'
+      +'</div>';
+  }
+  document.getElementById('log-balance-box').innerHTML=box('\u00daltimos 7 d\u00edas',sem)+box('\u00daltimos 14 d\u00edas',quinc);
+}
+
+function renderLogRutaLocal(data){
+  var maviLocal=data.filter(function(d){return d.transporte==='Mavi'&&d.ruta==='Ruta Local';}).reduce(function(s,d){return s+d.kilos;},0);
+  var assenLocal=data.filter(function(d){return d.transporte==='Assen'&&d.ruta==='Ruta Local';}).reduce(function(s,d){return s+d.kilos;},0);
+  var tot=maviLocal+assenLocal;
+  var pMavi=tot?Math.round(maviLocal/tot*100):50, pAssen=tot?100-pMavi:50;
+  var desb=Math.abs(pMavi-pAssen);
+  var color=desb>20?'#C00000':desb>10?'#ED7D31':'#375623';
+  var nMavi=data.filter(function(d){return d.transporte==='Mavi'&&d.ruta==='Ruta Local';}).length;
+  var nAssen=data.filter(function(d){return d.transporte==='Assen'&&d.ruta==='Ruta Local';}).length;
+  document.getElementById('log-ruta-local-box').innerHTML=
+    '<div class="card" style="padding:16px;">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;">'
+    +'<div style="text-align:center;padding:10px;background:#EFF4FF;border-radius:8px;">'
+    +'<div style="font-size:11px;color:#1F4E79;font-weight:700;">MAVI LOCAL</div>'
+    +'<div style="font-size:24px;font-weight:800;color:'+TRANSPORTES.Mavi.color+';">'+Math.round(maviLocal).toLocaleString('es-CL')+' Kg</div>'
+    +'<div style="font-size:11px;color:#888;">'+nMavi+' carga(s) &middot; '+pMavi+'% del total local</div></div>'
+    +'<div style="text-align:center;padding:10px;background:#FDECEC;border-radius:8px;">'
+    +'<div style="font-size:11px;color:#9C1C1C;font-weight:700;">ASSEN LOCAL</div>'
+    +'<div style="font-size:24px;font-weight:800;color:'+TRANSPORTES.Assen.color+';">'+Math.round(assenLocal).toLocaleString('es-CL')+' Kg</div>'
+    +'<div style="font-size:11px;color:#888;">'+nAssen+' carga(s) &middot; '+pAssen+'% del total local</div></div>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;">'
+    +'<div style="flex:1;height:26px;border-radius:13px;overflow:hidden;display:flex;box-shadow:inset 0 0 0 1px #eee;">'
+    +'<div style="width:'+pMavi+'%;background:'+TRANSPORTES.Mavi.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;">'+(pMavi>15?pMavi+'%':'')+'</div>'
+    +'<div style="width:'+pAssen+'%;background:'+TRANSPORTES.Assen.color+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;">'+(pAssen>15?pAssen+'%':'')+'</div>'
+    +'</div>'
+    +'<span style="font-size:13px;font-weight:800;color:'+color+';white-space:nowrap;min-width:80px;text-align:right;">'+desb+' pts</span>'
+    +'</div>'
+    +'<div style="font-size:11px;color:#888;margin-top:8px;">'+(desb>20?'&#9888; Desbalance importante en la ruta local del periodo seleccionado.':(desb>10?'Desbalance moderado, vale la pena monitorear.':'Ruta local relativamente equilibrada en este periodo.'))+'</div>'
+    +'</div>';
+}
+
+function renderLogOtrasRutas(data){
+  var rutasAisladas=[
+    {t:'Mavi',r:'Tocopilla'},{t:'Mavi',r:'Mejillones'},
+    {t:'Assen',r:'Iquique'},{t:'Assen',r:'Calama'},{t:'Assen',r:'Varas Novillo + Cerdo'}
+  ];
+  var h='';
+  rutasAisladas.forEach(function(rc){
+    var subset=data.filter(function(d){return d.transporte===rc.t&&d.ruta===rc.r;});
+    var kg=subset.reduce(function(s,d){return s+d.kilos;},0);
+    var n=subset.length;
+    var prom=n?Math.round(kg/n):0;
+    var color=TRANSPORTES[rc.t].color;
+    h+='<div class="card" style="padding:10px;text-align:center;border-top:3px solid '+color+';">'
+      +'<div style="font-size:10px;color:#888;font-weight:700;">'+rc.r.toUpperCase()+'</div>'
+      +'<div style="font-size:9px;color:'+color+';margin-bottom:4px;">'+rc.t+'</div>'
+      +'<div style="font-size:17px;font-weight:800;">'+Math.round(kg).toLocaleString('es-CL')+' Kg</div>'
+      +'<div style="font-size:10px;color:#888;">'+n+' carga(s) &middot; prom. '+prom.toLocaleString('es-CL')+' Kg</div>'
+      +'</div>';
+  });
+  document.getElementById('log-otras-rutas-box').innerHTML=h;
+}
+
+function renderLogTabla(){
+  var q=(document.getElementById('log-search')||{}).value||'';
+  q=q.toLowerCase();
+  var data=getFilteredLogData().slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  var h='<tr><th>Fecha</th><th>Transporte</th><th>Ruta</th><th style="text-align:right">Kilos</th><th style="text-align:right">Cajas</th><th>Origen</th><th>Subido por</th></tr>';
+  data.forEach(function(d){
+    var txt=(d.fecha+' '+d.transporte+' '+d.ruta+' '+(d.subido_por||'')).toLowerCase();
+    if(q && txt.indexOf(q)===-1) return;
+    h+='<tr><td>'+d.fecha+'</td><td>'+d.transporte+'</td><td>'+d.ruta+'</td>'
+      +'<td style="text-align:right">'+Math.round(d.kilos).toLocaleString('es-CL')+'</td>'
+      +'<td style="text-align:right">'+(d.cajas||'\u2014')+'</td>'
+      +'<td style="font-size:10px;color:#888">'+(d.origen==='manual'?'Manual':'Archivo')+'</td>'
+      +'<td style="font-size:10px;color:#888">'+(d.subido_por||'\u2014')+'</td></tr>';
+  });
+  document.getElementById('log-tabla-full').innerHTML=h;
+}
+function expLogCSV(){
+  var data=getFilteredLogData();
+  if(!data.length){ alert('No hay datos en el periodo seleccionado.'); return; }
+  var rows=[['Fecha','Transporte','Ruta','Kilos','Cajas','Origen','Subido por']];
+  data.forEach(function(d){ rows.push([d.fecha,d.transporte,d.ruta,d.kilos,d.cajas||'',d.origen,d.subido_por||'']); });
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(function(r){return r.join(';');}).join('\n'));
+  a.download='logistica_'+logPeriodo+'.csv'; a.click();
+}
+
+// ---- Insights (reglas automaticas, no IA en vivo -- ver nota) ----
+function renderLogAI(data){
+  var box=document.getElementById('log-ai-box');
+  var content=document.getElementById('log-ai-content');
+  box.style.display='';
+  var hoy=new Date();
+  function sumaDesde(dias){
+    var d0=new Date(hoy); d0.setDate(hoy.getDate()-dias); var s0=d0.toISOString().slice(0,10);
+    var subset=logisticaData.filter(function(d){return d.fecha>=s0;});
+    var mavi=subset.filter(function(d){return d.transporte==='Mavi';}).reduce(function(s,d){return s+d.kilos;},0);
+    var assen=subset.filter(function(d){return d.transporte==='Assen';}).reduce(function(s,d){return s+d.kilos;},0);
+    return {mavi:mavi,assen:assen};
+  }
+  var sem=sumaDesde(7), quinc=sumaDesde(14);
+  var msgs=[];
+  function analiza(r,label){
+    var tot=r.mavi+r.assen;
+    if(!tot) return;
+    var pMavi=r.mavi/tot*100;
+    var lider=pMavi>50?'Mavi':'Assen';
+    var pct=Math.round(Math.abs(pMavi-50)*2);
+    if(pct>20){
+      msgs.push('En '+label+', <strong>'+lider+'</strong> concentra el '+Math.round(lider==='Mavi'?pMavi:100-pMavi)+'% de la carga ('+pct+' pts de desbalance). Vale la pena revisar si conviene mover alguna ruta de '+lider+' hacia el otro transporte para acercarse al 50/50.');
+    }
+  }
+  analiza(sem,'los \u00faltimos 7 d\u00edas');
+  analiza(quinc,'los \u00faltimos 14 d\u00edas');
+  // ruta con mayor concentracion
+  ['Mavi','Assen'].forEach(function(t){
+    var subset=logisticaData.filter(function(d){return d.transporte===t && d.fecha>=sumaDesdeFecha(14);});
+    var porRuta={};
+    subset.forEach(function(d){ porRuta[d.ruta]=(porRuta[d.ruta]||0)+d.kilos; });
+    var totT=subset.reduce(function(s,d){return s+d.kilos;},0);
+    var rutas=Object.keys(porRuta);
+    if(rutas.length && totT>0){
+      var top=rutas.sort(function(a,b){return porRuta[b]-porRuta[a];})[0];
+      var pct=Math.round(porRuta[top]/totT*100);
+      if(pct>60) msgs.push('En '+t+', la ruta <strong>'+top+'</strong> concentra el '+pct+'% de sus kilos en los \u00faltimos 14 d\u00edas &mdash; esa ruta es la palanca m\u00e1s directa si buscas reequilibrar.');
+    }
+  });
+  if(!msgs.length) msgs.push('No se detectan desbalances relevantes en el periodo analizado (\u00faltimos 7 y 14 d\u00edas). La carga entre Mavi y Assen se ve razonablemente pareja.');
+  content.innerHTML=msgs.map(function(m){return '<div style="margin-bottom:8px;">&#8226; '+m+'</div>';}).join('')
+    +'<div style="font-size:10px;color:#888;margin-top:8px;border-top:.5px solid #ddd;padding-top:6px;">An\u00e1lisis autom\u00e1tico basado en reglas sobre los datos cargados (no es una consulta en vivo a un modelo de IA).</div>';
+}
+function sumaDesdeFecha(dias){
+  var d0=new Date(); d0.setDate(d0.getDate()-dias); return d0.toISOString().slice(0,10);
+}
+
+function renderRecuperaciones(){
+  if(!fsDB) return;
+  fsDB.collection('recuperacion_solicitudes').orderBy('ts','desc').limit(100).get().then(function(snap){
+    var empty=document.getElementById('rec-empty');
+    var tbl=document.getElementById('t-recuperaciones');
+    if(!tbl) return;
+    if(snap.empty){tbl.style.display='none';if(empty)empty.style.display='block';return;}
+    if(empty) empty.style.display='none';
+    tbl.style.display='';
+    var h='<tr><th>Correo</th><th>Fecha solicitud</th><th>Estado</th></tr>';
+    snap.forEach(function(doc){
+      var r=doc.data();
+      h+='<tr><td><strong>'+(r.email||'\u2014')+'</strong></td><td>'+(r.fecha_solicitud||'\u2014')+'</td>'
+        +'<td><span class="badge '+(r.atendida?'bg':'ba')+'">'+(r.atendida?'Atendida':'Pendiente')+'</span></td></tr>';
+    });
+    tbl.innerHTML=h;
+  }).catch(function(err){ console.warn('Error cargando recuperaciones:',err); });
+}
 function renderAccesos(){
+  renderRecuperaciones();
   if(!fsDB){
     var e=document.getElementById('acc-empty');
     if(e){e.textContent='Sin conexion a la base de datos -- no se puede cargar el registro.';e.style.display='block';}
