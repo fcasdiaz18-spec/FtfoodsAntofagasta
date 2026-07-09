@@ -1076,6 +1076,11 @@ function selVendInsight(vendName,el){
   },350);
 }
 
+function togDiv(gid){
+  document.querySelectorAll('.det-'+gid).forEach(function(r){
+    r.style.display=(r.style.display==='none')?'block':'none';
+  });
+}
 function buildLiquidacionesAlert(filtroVend){
   var UMBRAL=-10; // margen % considerado liquidacion/muy negativo
   var neg=[];
@@ -1083,7 +1088,7 @@ function buildLiquidacionesAlert(filtroVend){
     if(filtroVend && cl.vend!==filtroVend) return;
     (cl.productos||[]).forEach(function(p){
       if(p.mg<=UMBRAL){
-        neg.push({vend:cl.vend,cli:cl.cli,cod:p.cod,prod:p.prod,fact:p.fact,mg:p.mg});
+        neg.push({vend:cl.vend,cli:cl.cli,cod_cli:cl.cod_cli,cod:p.cod,prod:p.prod,fact:p.fact,mg:p.mg});
       }
     });
   });
@@ -1091,62 +1096,89 @@ function buildLiquidacionesAlert(filtroVend){
   neg.sort(function(a,b){return a.mg-b.mg;});
   neg=neg.slice(0,8);
   var totalFact=neg.reduce(function(s,n){return s+n.fact;},0);
+  var uid='liq'+(filtroVend?filtroVend.replace(/[^a-zA-Z0-9]/g,''):'all');
   var html='<div style="background:#FDECEC;border:1px solid #C00000;border-radius:8px;padding:10px 12px;margin-bottom:10px;">'
-    +'<div style="font-size:11px;font-weight:700;color:#C00000;margin-bottom:6px;">\u{1F6A8} Liquidaciones / m\u00e1rgenes muy negativos (\u2264'+UMBRAL+'%) \u2014 $'+totalFact.toFixed(2)+'M en total</div>';
-  neg.forEach(function(n){
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:3px 0;border-bottom:.5px solid #f5d5d5;">'
-      +'<span style="color:#5c0f0f;"><strong>'+n.prod+'</strong>'+(filtroVend?'':' \u00b7 '+n.vend)+' \u00b7 '+n.cli.substring(0,22)+'</span>'
+    +'<div style="font-size:11px;font-weight:700;color:#C00000;margin-bottom:6px;">\u{1F6A8} Liquidaciones / m\u00e1rgenes muy negativos (\u2264'+UMBRAL+'%) \u2014 $'+totalFact.toFixed(2)+'M en total <span style="font-weight:400;font-size:9px;color:#888;">(clic en una l\u00ednea para ver el detalle)</span></div>';
+  neg.forEach(function(n,idx){
+    var gid=uid+'_'+idx;
+    html+='<div class="grp-row" onclick="togDiv(\''+gid+'\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:3px 0;border-bottom:.5px solid #f5d5d5;">'
+      +'<span style="color:#5c0f0f;"><strong>'+n.prod+'</strong>'+(filtroVend?'':' \u00b7 '+n.vend)+' \u00b7 '+n.cli.substring(0,22)+' <span class="arr" style="color:#C00000;">\u25BC</span></span>'
       +'<span style="color:#C00000;font-weight:700;white-space:nowrap;margin-left:8px;">'+n.mg+'% \u00b7 $'+n.fact.toFixed(2)+'M</span></div>';
+    html+='<div class="det-'+gid+'" style="display:none;background:#fff;border-radius:6px;padding:8px 10px;margin:4px 0;font-size:10px;color:#444;line-height:1.7;">'
+      +'<div><strong>Producto:</strong> '+n.prod+' (c\u00f3digo '+n.cod+')</div>'
+      +'<div><strong>Cliente:</strong> '+n.cli+' (c\u00f3digo '+(n.cod_cli||'\u2014')+')</div>'
+      +'<div><strong>Vendedor / cuenta:</strong> '+n.vend+'</div>'
+      +'<div><strong>Facturaci\u00f3n:</strong> $'+n.fact.toFixed(3)+'M &middot; <strong>Margen:</strong> '+n.mg+'%</div>'
+      +'<div style="color:#aaa;font-size:9px;margin-top:3px;">El detalle de d\u00eda espec\u00edfico no est\u00e1 disponible en los datos cargados (SAP entrega el acumulado del mes por cliente/producto, no por d\u00eda). Si necesitas la fecha exacta, hay que revisarlo directo en SAP con este c\u00f3digo de producto y cliente.</div>'
+      +'</div>';
   });
   html+='<div style="font-size:9px;color:#888;margin-top:5px;">'+(filtroVend?'':'Incluye todas las cuentas, tambi\u00e9n Katherine Merino (funcionario/administrativo) \u2014 ')+'revisar si son ajustes, mermas o liquidaciones reales.</div>';
   html+='</div>';
   return html;
 }
 function renderResumenInsights(content,esperadoPct,avgMargen,VENDS_INSIGHT){
-  var tips=[];
-  VENDS_INSIGHT.forEach(function(v){
-    var mayo=CLIENTES_HIST.Mayo[v.nombre]||0, junio=CLIENTES_HIST.Junio[v.nombre]||0, julio=v.n_cli||0;
-    var pctVsJunio=junio?Math.round(julio/junio*100):0;
-    var diffMargen=Math.round((v.margen_pct-avgMargen)*10)/10;
-    var nombreCorto=v.nombre.split(' ')[0];
-    if(junio>mayo && pctVsJunio>=esperadoPct+10){
-      tips.push({corto:nombreCorto,color:v.color,icon:'\u{1F680}',tone:'good',txt:'Cartera en alza y ritmo fuerte en julio.'});
-    } else if(junio<mayo && pctVsJunio<esperadoPct-10){
-      tips.push({corto:nombreCorto,color:v.color,icon:'\u26A0\uFE0F',tone:'bad',txt:'Cartera a la baja y julio parte lento. Conversar pronto.'});
-    } else if(junio<mayo && pctVsJunio>=esperadoPct+10){
-      tips.push({corto:nombreCorto,color:v.color,icon:'\u{1F4C8}',tone:'good',txt:'Hab\u00eda bajado, pero julio muestra recuperaci\u00f3n.'});
-    }
-    if(diffMargen>=3){
-      tips.push({corto:nombreCorto,color:v.color,icon:'\u{1F4B0}',tone:'good',txt:'Margen '+diffMargen+' pts sobre el promedio ('+v.margen_pct+'%).'});
-    } else if(diffMargen<=-3){
-      tips.push({corto:nombreCorto,color:v.color,icon:'\u{1F4C9}',tone:'bad',txt:'Margen '+Math.abs(diffMargen)+' pts bajo el promedio ('+v.margen_pct+'%).'});
-    }
-  });
-  tips.sort(function(a,b){var order={bad:0,watch:1,good:2};return order[a.tone]-order[b.tone];});
-  tips=tips.slice(0,5);
-
   var k=D.kpis;
   var pace = k.avance_k >= esperadoPct+10 ? 'good' : k.avance_k <= esperadoPct-10 ? 'bad' : 'watch';
   var paceIcon = pace==='good'?'\u2705':pace==='bad'?'\u23F3':'\u27A1\uFE0F';
   var resumenTxt = 'Sucursal: '+k.avance_k+'% de meta en kilos y '+k.margen_pct+'% de margen (meta '+k.meta_mg_pct+'%) al d\u00eda '+k.dias_trabajados+' de '+k.dias_totales+'.';
-  var toneStyle={good:{bg:'#E8F5E9',bd:'#375623',fg:'#1e3a20'},bad:{bg:'#FDECEC',bd:'#C00000',fg:'#5c0f0f'},watch:{bg:'#FFF8E7',bd:'#C9A227',fg:'#5c4a0f'}};
 
   var html=buildLiquidacionesAlert();
   html+='<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#555;margin-bottom:10px;padding-bottom:8px;border-bottom:.5px solid #e0d5ee;">'+paceIcon+' '+resumenTxt+'</div>';
-  if(!tips.length){
-    html+='<div style="font-size:11px;color:#888;">Sin se\u00f1ales destacadas esta semana \u2014 la operaci\u00f3n va estable.</div>';
-  } else {
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;">';
-    tips.forEach(function(t){
-      var st=toneStyle[t.tone];
-      html+='<div style="background:'+st.bg+';border-left:3px solid '+st.bd+';border-radius:6px;padding:8px 10px;">'
-        +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
-        +'<span style="font-size:13px;">'+t.icon+'</span><span class="dot" style="background:'+t.color+'"></span>'
-        +'<strong style="font-size:11px;color:'+st.fg+';">'+t.corto+'</strong></div>'
-        +'<div style="font-size:10px;color:'+st.fg+';line-height:1.4;">'+t.txt+'</div></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;">';
+
+  VENDS_INSIGHT.forEach(function(v){
+    var mayo=CLIENTES_HIST.Mayo[v.nombre]||0, junio=CLIENTES_HIST.Junio[v.nombre]||0, julio=v.n_cli||0;
+    var pctVsJunio=junio?Math.round(julio/junio*100):0;
+    var diffMargen=Math.round((v.margen_pct-avgMargen)*10)/10;
+
+    var candPos=[], candNeg=[];
+    // Cartera (peso 2 si es extremo)
+    if(junio>mayo){
+      candPos.push({peso:(pctVsJunio>=esperadoPct+10?2:1),icon:'\u{1F680}',txt:'Cartera en alza (May '+mayo+'\u2192Jun '+junio+') y ritmo julio '+pctVsJunio+'% de junio.'});
+    } else if(junio<mayo){
+      candNeg.push({peso:(pctVsJunio<esperadoPct-10?2:1),icon:'\u26A0\uFE0F',txt:'Cartera baj\u00f3 (May '+mayo+'\u2192Jun '+junio+'). Ritmo julio '+pctVsJunio+'% de junio.'});
+    }
+    // Ritmo julio (independiente si cartera fue estable)
+    if(pctVsJunio>=esperadoPct+10){
+      candPos.push({peso:1.5,icon:'\u26A1',txt:'Ritmo de julio adelantado: '+pctVsJunio+'% de junio ya (esperado ~'+esperadoPct+'%).'});
+    } else if(pctVsJunio<esperadoPct-10){
+      candNeg.push({peso:1.5,icon:'\u{1F40C}',txt:'Ritmo de julio atrasado: solo '+pctVsJunio+'% de junio (esperado ~'+esperadoPct+'%).'});
+    }
+    // Margen
+    if(diffMargen>=0){
+      candPos.push({peso:(diffMargen>=3?2:0.5),icon:'\u{1F4B0}',txt:'Margen '+v.margen_pct+'%, '+(diffMargen>0?'+'+diffMargen+' pts':'igual')+' vs promedio sucursal.'});
+    } else {
+      candNeg.push({peso:(diffMargen<=-3?2:0.5),icon:'\u{1F4C9}',txt:'Margen '+v.margen_pct+'%, '+diffMargen+' pts bajo el promedio sucursal.'});
+    }
+    // Liquidaciones fuertes cuentan como negativo prioritario
+    var liqCount=0, liqFact=0;
+    (D.clientes||[]).forEach(function(cl){
+      if(cl.vend!==v.nombre) return;
+      (cl.productos||[]).forEach(function(p){ if(p.mg<=-10){ liqCount++; liqFact+=p.fact; } });
     });
-    html+='</div>';
-  }
+    if(liqCount){
+      candNeg.push({peso:3,icon:'\u{1F6A8}',txt:liqCount+' producto(s) con margen muy negativo por $'+liqFact.toFixed(2)+'M.'});
+    }
+
+    candPos.sort(function(a,b){return b.peso-a.peso;});
+    candNeg.sort(function(a,b){return b.peso-a.peso;});
+    var mejorPos=candPos[0]||{icon:'\u2796',txt:'Sin se\u00f1al positiva destacada esta semana.'};
+    var mejorNeg=candNeg[0]||{icon:'\u2796',txt:'Sin alertas esta semana.'};
+
+    html+='<div style="background:#fff;border:.5px solid #e8e0f0;border-radius:8px;padding:10px;">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'
+      +'<span class="dot" style="background:'+v.color+'"></span>'
+      +'<strong style="font-size:11px;color:#333;">'+v.nombre+'</strong></div>'
+      +'<div style="display:flex;gap:6px;align-items:flex-start;padding:5px 0;border-top:.5px solid #f2f2f2;">'
+      +'<span style="font-size:12px;">'+mejorPos.icon+'</span>'
+      +'<span style="font-size:10px;color:#1e3a20;line-height:1.4;">'+mejorPos.txt+'</span></div>'
+      +'<div style="display:flex;gap:6px;align-items:flex-start;padding:5px 0;border-top:.5px solid #f2f2f2;">'
+      +'<span style="font-size:12px;">'+mejorNeg.icon+'</span>'
+      +'<span style="font-size:10px;color:#5c0f0f;line-height:1.4;">'+mejorNeg.txt+'</span></div>'
+      +'</div>';
+  });
+
+  html+='</div>';
   html+='<div style="font-size:9px;color:#aaa;margin-top:10px;">Actualizado '+new Date().toLocaleTimeString('es-CL')+'</div>';
   content.innerHTML=html;
 }
