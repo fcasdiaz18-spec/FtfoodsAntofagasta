@@ -1038,73 +1038,84 @@ function renderClientesHist(){
   box.style.display='';
   box.innerHTML='<div class="sec" style="color:#7030A0;display:flex;align-items:center;gap:8px;">'
     +'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7030A0;animation:pulseLive 1.4s infinite;"></span>'
-    +'Insights (solo administrador) <span style="font-weight:400;font-size:10px;color:#888;">analizando tendencias...</span></div>'
-    +'<div style="background:#F5F0FA;border:.5px solid #7030A0;border-radius:8px;padding:14px;font-size:12px;color:#4A2E6B;">Cargando...</div>';
+    +'Insights <span style="font-weight:400;font-size:10px;color:#888;">analizando...</span></div>'
+    +'<div style="color:#888;font-size:11px;padding:10px 0;">Cargando...</div>';
 
   var vendTotalFactIns=D.vendedores.reduce(function(s,v){return s+v.fact;},0)||1;
   var avgMargen=D.kpis.margen_pct;
-  var msgsCli=[], msgsMargen=[], msgsKilos=[];
+  var tips=[]; // {vend,color,icon,txt,tone} tone: good|bad|watch
 
   D.vendedores.forEach(function(v){
     var mayo=CLIENTES_HIST.Mayo[v.nombre]||0, junio=CLIENTES_HIST.Junio[v.nombre]||0, julio=v.n_cli||0;
     var pctVsJunio=junio?Math.round(julio/junio*100):0;
-    if(junio>mayo && pctVsJunio>=esperadoPct+10){
-      msgsCli.push('<strong>'+v.nombre+'</strong> viene mejorando en cartera (Mayo '+mayo+' \u2192 Junio '+junio+') y julio ya lleva ritmo por sobre lo esperado.');
-    } else if(junio<mayo && pctVsJunio<esperadoPct-10){
-      msgsCli.push('<strong>'+v.nombre+'</strong> viene bajando en cartera (Mayo '+mayo+' \u2192 Junio '+junio+') y julio parte lento tambi\u00e9n. Vale la pena conversar.');
-    } else if(junio<mayo && pctVsJunio>=esperadoPct+10){
-      msgsCli.push('<strong>'+v.nombre+'</strong> hab\u00eda bajado en junio, pero julio arranca con buen ritmo \u2014 posible recuperaci\u00f3n.');
-    } else if(junio>=mayo && pctVsJunio<esperadoPct-10){
-      msgsCli.push('<strong>'+v.nombre+'</strong> ven\u00eda estable, pero julio parte m\u00e1s lento de lo esperado en clientes.');
-    }
-    // Margen
     var diffMargen=Math.round((v.margen_pct-avgMargen)*10)/10;
-    if(diffMargen>=3){
-      msgsMargen.push('<strong>'+v.nombre+'</strong> tiene margen de '+v.margen_pct+'%, '+diffMargen+' pts sobre el promedio de sucursal ('+avgMargen+'%) \u2014 buena mezcla de productos.');
-    } else if(diffMargen<=-3){
-      msgsMargen.push('<strong>'+v.nombre+'</strong> tiene margen de '+v.margen_pct+'%, '+Math.abs(diffMargen)+' pts bajo el promedio de sucursal ('+avgMargen+'%) \u2014 revisar mezcla o descuentos.');
+    var nombreCorto=v.nombre.split(' ')[0];
+
+    if(junio>mayo && pctVsJunio>=esperadoPct+10){
+      tips.push({vend:v.nombre,corto:nombreCorto,color:v.color,icon:'\u{1F680}',tone:'good',
+        txt:'Cartera en alza y ritmo fuerte en julio. Ideal para reforzar positivamente.'});
+    } else if(junio<mayo && pctVsJunio<esperadoPct-10){
+      tips.push({vend:v.nombre,corto:nombreCorto,color:v.color,icon:'\u26A0\uFE0F',tone:'bad',
+        txt:'Cartera a la baja y julio parte lento. Conversar pronto.'});
+    } else if(junio<mayo && pctVsJunio>=esperadoPct+10){
+      tips.push({vend:v.nombre,corto:nombreCorto,color:v.color,icon:'\u{1F4C8}',tone:'good',
+        txt:'Hab\u00eda bajado, pero julio muestra se\u00f1ales de recuperaci\u00f3n.'});
     }
-    // Kilos / avance de facturacion individual vs ritmo esperado del mes
-    var partFact=Math.round(v.fact/vendTotalFactIns*100);
-    var avanceIndiv=D.kpis.meta_fact?Math.round(v.fact/(D.kpis.meta_fact*(partFact/100||0.01))*100):0;
+    if(diffMargen>=3){
+      tips.push({vend:v.nombre,corto:nombreCorto,color:v.color,icon:'\u{1F4B0}',tone:'good',
+        txt:'Margen '+diffMargen+' pts sobre el promedio ('+v.margen_pct+'%). Buena mezcla de productos.'});
+    } else if(diffMargen<=-3){
+      tips.push({vend:v.nombre,corto:nombreCorto,color:v.color,icon:'\u{1F4C9}',tone:'bad',
+        txt:'Margen '+Math.abs(diffMargen)+' pts bajo el promedio ('+v.margen_pct+'%). Revisar mezcla o descuentos.'});
+    }
   });
 
-  // Kilos: comparar avance de kilos de la sucursal vs dias transcurridos (contexto general)
-  var kilosMsg = D.kpis.avance_k >= esperadoPct+10
-    ? 'La sucursal lleva '+D.kpis.avance_k+'% de la meta de kilos, por sobre el ritmo esperado a estas alturas del mes ('+esperadoPct+'%).'
-    : D.kpis.avance_k <= esperadoPct-10
-      ? 'La sucursal lleva '+D.kpis.avance_k+'% de la meta de kilos, por debajo del ritmo esperado a estas alturas del mes ('+esperadoPct+'%).'
-      : 'El avance de kilos de la sucursal ('+D.kpis.avance_k+'%) va en l\u00ednea con el ritmo esperado del mes ('+esperadoPct+'%).';
-  msgsKilos.push(kilosMsg);
-  var margenMsg = D.kpis.avance_mgpct>=100
-    ? 'El margen % de la sucursal ('+D.kpis.margen_pct+'%) ya alcanz\u00f3 la meta mensual ('+D.kpis.meta_mg_pct+'%).'
-    : 'El margen % de la sucursal ('+D.kpis.margen_pct+'%) todav\u00eda est\u00e1 '+(D.kpis.meta_mg_pct-D.kpis.margen_pct).toFixed(1)+' pts bajo la meta ('+D.kpis.meta_mg_pct+'%).';
-  msgsMargen.unshift(margenMsg);
+  // Priorizar: negativos primero (mas accionables), luego positivos, maximo 5 tips
+  tips.sort(function(a,b){
+    var order={bad:0,watch:1,good:2};
+    return order[a.tone]-order[b.tone];
+  });
+  tips=tips.slice(0,5);
 
-  if(!msgsCli.length) msgsCli.push('Sin tendencias marcadas de mejora o deterioro en cartera de clientes este mes.');
-  if(msgsMargen.length===1) msgsMargen.push('Sin vendedores con margen notablemente por sobre o bajo el promedio de sucursal.');
+  var pace = D.kpis.avance_k >= esperadoPct+10 ? 'good' : D.kpis.avance_k <= esperadoPct-10 ? 'bad' : 'watch';
+  var paceIcon = pace==='good'?'\u2705':pace==='bad'?'\u23F3':'\u27A1\uFE0F';
+  var resumenTxt = 'Sucursal: '+D.kpis.avance_k+'% de meta en kilos y '+D.kpis.margen_pct+'% de margen (meta '+D.kpis.meta_mg_pct+'%) al d\u00eda '+D.kpis.dias_trabajados+' de '+D.kpis.dias_totales+'.';
 
-  function bloque(titulo,icono,msgs){
-    return '<div style="margin-bottom:12px;"><div style="font-weight:700;font-size:11px;color:#4A2E6B;margin-bottom:4px;">'+icono+' '+titulo+'</div>'
-      +msgs.map(function(m){return '<div style="margin-bottom:5px;padding-left:4px;">&#8226; '+m+'</div>';}).join('')
-      +'</div>';
-  }
+  var toneStyle={
+    good:{bg:'#E8F5E9',bd:'#375623',fg:'#1e3a20'},
+    bad:{bg:'#FDECEC',bd:'#C00000',fg:'#5c0f0f'},
+    watch:{bg:'#FFF8E7',bd:'#C9A227',fg:'#5c4a0f'}
+  };
 
   setTimeout(function(){
     var content=document.getElementById('vend-insights-content');
     if(!content) return;
-    content.innerHTML=
-      bloque('Clientes','\u{1F465}',msgsCli)
-      +bloque('Margen','\u{1F4B0}',msgsMargen)
-      +bloque('Kilos','\u2696\ufe0f',msgsKilos)
-      +'<div style="font-size:10px;color:#888;margin-top:8px;border-top:.5px solid #ddd;padding-top:6px;">\u00daltima actualizaci\u00f3n: '+new Date().toLocaleString('es-CL')+'. An\u00e1lisis autom\u00e1tico basado en reglas sobre los datos cargados (no es una consulta en vivo a un modelo de IA).</div>';
+    var html='<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#555;margin-bottom:10px;padding-bottom:8px;border-bottom:.5px solid #e0d5ee;">'+paceIcon+' '+resumenTxt+'</div>';
+    if(!tips.length){
+      html+='<div style="font-size:11px;color:#888;">Sin se\u00f1ales destacadas esta semana \u2014 la operaci\u00f3n va estable.</div>';
+    } else {
+      html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;">';
+      tips.forEach(function(t){
+        var st=toneStyle[t.tone];
+        html+='<div style="background:'+st.bg+';border-left:3px solid '+st.bd+';border-radius:6px;padding:8px 10px;">'
+          +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">'
+          +'<span style="font-size:13px;">'+t.icon+'</span>'
+          +'<span class="dot" style="background:'+t.color+'"></span>'
+          +'<strong style="font-size:11px;color:'+st.fg+';">'+t.corto+'</strong></div>'
+          +'<div style="font-size:10px;color:'+st.fg+';line-height:1.4;">'+t.txt+'</div>'
+          +'</div>';
+      });
+      html+='</div>';
+    }
+    html+='<div style="font-size:9px;color:#aaa;margin-top:10px;">An\u00e1lisis autom\u00e1tico por reglas (no es IA en vivo) \u00b7 '+new Date().toLocaleTimeString('es-CL')+'</div>';
+    content.innerHTML=html;
   },400);
 
   box.innerHTML='<div class="sec" style="color:#7030A0;display:flex;align-items:center;gap:8px;">'
     +'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#375623;box-shadow:0 0 6px #375623;"></span>'
-    +'Insights (solo administrador) <span style="font-weight:400;font-size:10px;color:#375623;">&#9679; en l\u00ednea</span></div>'
-    +'<div id="vend-insights-content" style="background:#F5F0FA;border:.5px solid #7030A0;border-radius:8px;padding:14px;font-size:12px;color:#4A2E6B;line-height:1.6;">'
-    +'<div style="color:#888;">Generando an\u00e1lisis...</div></div>';
+    +'Insights <span style="font-weight:400;font-size:10px;color:#375623;">&#9679; en l\u00ednea</span></div>'
+    +'<div id="vend-insights-content" style="background:#F9F6FC;border-radius:8px;padding:12px;">'
+    +'<div style="color:#888;font-size:11px;">Generando...</div></div>';
 }
 
 function selCat(n,el){
