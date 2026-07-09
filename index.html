@@ -505,6 +505,7 @@ tr:hover td{background:#fafafa;}
       <div><label style="font-size:10px;color:#888;">Ruta</label><select id="log-m-ruta" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"></select></div>
       <div><label style="font-size:10px;color:#888;">Kilos</label><input type="number" id="log-m-kilos" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"></div>
       <div><label style="font-size:10px;color:#888;">Cajas (opcional)</label><input type="number" id="log-m-cajas" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"></div>
+      <div><label style="font-size:10px;color:#888;">M&#243;vil (opcional)</label><input type="text" id="log-m-movil" placeholder="Ej: Paulina" style="width:100%;padding:7px;border-radius:6px;border:.5px solid #ddd;font-size:12px;"></div>
     </div>
     <button onclick="agregarManualLog()" style="padding:8px 16px;border:none;border-radius:6px;background:#1F4E79;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">+ Agregar registro</button>
   </div>
@@ -543,6 +544,9 @@ tr:hover td{background:#fafafa;}
 
   <div class="sec" style="margin-top:18px;">Otras rutas <span style="font-weight:400;color:#888;font-size:11px;">aisladas por comuna, sin comparativo cruzado</span></div>
   <div id="log-otras-rutas-box" class="ops-kpis" style="grid-template-columns:repeat(5,1fr);margin-bottom:8px;"></div>
+
+  <div class="sec" style="margin-top:18px;">Kilos diarios por m&#243;vil <span style="font-weight:400;color:#888;font-size:11px;">detectado autom&#225;ticamente desde las planillas de despacho</span></div>
+  <table id="log-tabla-movil" style="font-size:11px;margin-bottom:8px;"></table>
 
   <div id="log-ai-box" style="display:none;margin-top:18px;">
     <div class="sec" style="color:#7030A0;">&#10024; Insights (solo administrador)</div>
@@ -2482,8 +2486,9 @@ function agregarManualLog(){
   var ruta=document.getElementById('log-m-ruta').value;
   var kilos=parseFloat(document.getElementById('log-m-kilos').value);
   var cajas=parseFloat(document.getElementById('log-m-cajas').value)||null;
+  var movil=(document.getElementById('log-m-movil').value||'').trim()||null;
   if(!fecha||!kilos){ alert('Fecha y Kilos son obligatorios.'); return; }
-  var rec={fecha:fecha,transporte:transporte,ruta:ruta,kilos:kilos,cajas:cajas,
+  var rec={fecha:fecha,transporte:transporte,ruta:ruta,kilos:kilos,cajas:cajas,movil:movil,
     origen:'manual',archivo:null,subido_por:currentUserEmail,ts:Date.now()};
   if(fsDB){
     fsDB.collection('logistica_cargas').add(rec).then(function(){
@@ -2515,18 +2520,90 @@ function procesarArchivoLog(){
         var wb=XLSX.read(e.target.result,{type:'array'});
         var ws=wb.Sheets[wb.SheetNames[0]];
         rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+        procesarFilasLog(rows,f.name,forced);
       }else{
         var text=new TextDecoder('utf-8').decode(e.target.result);
-        var delim=text.indexOf('\t')>-1?'\t':(text.indexOf(';')>-1?';':',');
-        rows=text.split(/\r?\n/).filter(function(l){return l.trim();}).map(function(l){return l.split(delim);});
+        if(text.indexOf('PLANILLA DE RUTA DE DESPACHO')>-1){
+          procesarPlanillaDespacho(text,f.name,forced);
+        }else{
+          var delim=text.indexOf('\t')>-1?'\t':(text.indexOf(';')>-1?';':',');
+          rows=text.split(/\r?\n/).filter(function(l){return l.trim();}).map(function(l){return l.split(delim);});
+          procesarFilasLog(rows,f.name,forced);
+        }
       }
-      procesarFilasLog(rows,f.name,forced);
     }catch(err){
       status.innerHTML='<span style="color:#C00000">No se pudo leer el archivo: '+err.message+'</span>';
     }
   };
   if(ext==='xlsx'||ext==='xls') reader.readAsArrayBuffer(f);
   else reader.readAsArrayBuffer(f);
+}
+
+function parseNumCL(s){
+  if(s==null) return 0;
+  s=String(s).trim().replace(/\./g,'').replace(',','.');
+  var n=parseFloat(s);
+  return isNaN(n)?0:n;
+}
+
+function procesarPlanillaDespacho(text,filename,forcedTransporte){
+  var status=document.getElementById('log-file-status');
+  var lines=text.split(/\r?\n/);
+  // Agrupar por numero de planilla (se repite en cada pagina del mismo reparto)
+  var grupos=[]; // {planilla, lines:[]}
+  var actual=null;
+  lines.forEach(function(l){
+    var mPlan=l.match(/PLANILLA\s*:\s*(\S+)/);
+    if(mPlan){
+      if(!actual || actual.planilla!==mPlan[1]){
+        actual={planilla:mPlan[1],lines:[]};
+        grupos.push(actual);
+      }
+    }
+    if(actual) actual.lines.push(l);
+  });
+  if(!grupos.length){
+    status.innerHTML='<span style="color:#C00000">No se reconoci\u00f3 ninguna planilla en el archivo.</span>';
+    return;
+  }
+  var out=[];
+  var rutasConocidas=['Tocopilla','Mejillones','Iquique','Calama','Varas Novillo + Cerdo','Ruta Local'];
+  grupos.forEach(function(g){
+    var block=g.lines.join('\n');
+    var mFecha=block.match(/FECHA TRANSPORTE:\s*(\d{2})\.(\d{2})\.(\d{4})/);
+    var fecha=mFecha?(mFecha[3]+'-'+mFecha[2]+'-'+mFecha[1]):'';
+    var mMovil=block.match(/MOVIL\s*:\s*(.+)/);
+    var movil=mMovil?mMovil[1].trim().replace(/\s{2,}.*$/,'').trim():'';
+    var mTransp=block.match(/TRANSPORTISTA:\s*(.+)/);
+    var transpTxt=mTransp?mTransp[1].trim():'';
+    var transporte=forcedTransporte||detectarTransporte(transpTxt)||detectarTransporte(movil)||'';
+    // Ruta: buscar en el nombre del movil, si no en las direcciones del bloque
+    var ruta='';
+    var searchTxt=(movil+' '+block).toUpperCase();
+    for(var i=0;i<rutasConocidas.length;i++){
+      if(rutasConocidas[i]!=='Ruta Local' && searchTxt.indexOf(rutasConocidas[i].toUpperCase())>-1){ ruta=rutasConocidas[i]; break; }
+    }
+    if(!ruta) ruta='Ruta Local';
+    // Kilos: usar el ultimo TOTAL FINAL del bloque (autoritativo, no los SUB TOTAL parciales)
+    var totalMatches=block.match(/TOTAL FINAL:\s*([\d.,]+)\s+(\d+)\s+([\d.,]+)/g);
+    var kilos=0, bultos=0;
+    if(totalMatches && totalMatches.length){
+      var last=totalMatches[totalMatches.length-1];
+      var mDet=last.match(/TOTAL FINAL:\s*([\d.,]+)\s+(\d+)\s+([\d.,]+)/);
+      kilos=parseNumCL(mDet[1]);
+      bultos=parseInt(mDet[2],10)||0;
+    }
+    if(fecha && kilos>0){
+      out.push({fecha:fecha,transporte:transporte,ruta:ruta,kilos:kilos,cajas:bultos,movil:movil,planilla:g.planilla});
+    }
+  });
+  if(!out.length){
+    status.innerHTML='<span style="color:#C00000">Se reconocieron '+grupos.length+' planilla(s) pero no se pudo extraer el total final. Revisa el formato del archivo.</span>';
+    return;
+  }
+  pendingLogRows=out;
+  status.innerHTML='<span style="color:#375623">'+out.length+' planilla(s) de despacho detectada(s) (formato reconocido autom\u00e1ticamente). Revisa la vista previa antes de guardar.</span>';
+  renderPreviewLog();
 }
 
 function normHeader(h){ return String(h||'').toLowerCase().trim(); }
@@ -2582,7 +2659,7 @@ function parseFechaLog(v){
 function renderPreviewLog(){
   var box=document.getElementById('log-preview-box');
   box.style.display='';
-  var h='<tr><th>Fecha</th><th>Transporte</th><th>Ruta</th><th>Kilos</th><th>Cajas</th></tr>';
+  var h='<tr><th>Fecha</th><th>Transporte</th><th>Ruta</th><th>M\u00f3vil</th><th>Kilos</th><th>Cajas</th></tr>';
   pendingLogRows.forEach(function(r,idx){
     var transpOpts=Object.keys(TRANSPORTES).map(function(t){return '<option value="'+t+'"'+(r.transporte===t?' selected':'')+'>'+t+'</option>';}).join('');
     var rutaOpts=(TRANSPORTES[r.transporte||'Mavi']||TRANSPORTES.Mavi).rutas.map(function(rt){return '<option value="'+rt+'"'+(r.ruta===rt?' selected':'')+'>'+rt+'</option>';}).join('');
@@ -2590,6 +2667,7 @@ function renderPreviewLog(){
       +'<td><input type="date" value="'+r.fecha+'" style="font-size:10px;width:110px;" onchange="pendingLogRows['+idx+'].fecha=this.value"></td>'
       +'<td><select style="font-size:10px;" onchange="pendingLogRows['+idx+'].transporte=this.value;renderPreviewLog();">'+'<option value="">--</option>'+transpOpts+'</select></td>'
       +'<td><select style="font-size:10px;" onchange="pendingLogRows['+idx+'].ruta=this.value">'+'<option value="">--</option>'+rutaOpts+'</select></td>'
+      +'<td><input type="text" value="'+(r.movil||'')+'" placeholder="opcional" style="font-size:10px;width:100px;" onchange="pendingLogRows['+idx+'].movil=this.value"></td>'
       +'<td><input type="number" value="'+r.kilos+'" style="font-size:10px;width:80px;" onchange="pendingLogRows['+idx+'].kilos=parseFloat(this.value)||0"></td>'
       +'<td><input type="number" value="'+(r.cajas||'')+'" style="font-size:10px;width:70px;" onchange="pendingLogRows['+idx+'].cajas=parseFloat(this.value)||null"></td>'
       +'</tr>';
@@ -2614,7 +2692,7 @@ function confirmarGuardarLog(){
   var batch=fsDB.batch();
   valid.forEach(function(r){
     var ref=fsDB.collection('logistica_cargas').doc();
-    batch.set(ref,{fecha:r.fecha,transporte:r.transporte,ruta:r.ruta,kilos:r.kilos,cajas:r.cajas,
+    batch.set(ref,{fecha:r.fecha,transporte:r.transporte,ruta:r.ruta,kilos:r.kilos,cajas:r.cajas,movil:r.movil||null,
       origen:'archivo',archivo:filename,subido_por:currentUserEmail,ts:Date.now()});
   });
   batch.commit().then(function(){
@@ -2660,6 +2738,7 @@ function renderLogDashboardWrap(){
   renderLogBalance(data);
   renderLogRutaLocal(data);
   renderLogOtrasRutas(data);
+  renderLogMovil(data);
   renderLogTabla();
   if(isAdmin) renderLogAI(data); else document.getElementById('log-ai-box').style.display='none';
 }
@@ -2785,18 +2864,43 @@ function renderLogOtrasRutas(data){
   document.getElementById('log-otras-rutas-box').innerHTML=h;
 }
 
+function renderLogMovil(data){
+  var tbl=document.getElementById('log-tabla-movil');
+  if(!tbl) return;
+  var conMovil=data.filter(function(d){return d.movil;});
+  if(!conMovil.length){
+    tbl.innerHTML='<tr><td style="padding:12px;color:#888;font-size:11px;">A\u00fan no hay cargas con m\u00f3vil identificado en este periodo. Se completa autom\u00e1ticamente al subir planillas de despacho.</td></tr>';
+    return;
+  }
+  var porMovilFecha={}; // movil -> fecha -> kg
+  var movilTransporte={};
+  conMovil.forEach(function(d){
+    if(!porMovilFecha[d.movil]) porMovilFecha[d.movil]={};
+    porMovilFecha[d.movil][d.fecha]=(porMovilFecha[d.movil][d.fecha]||0)+d.kilos;
+    movilTransporte[d.movil]=d.transporte;
+  });
+  var h='<tr><th>M\u00f3vil</th><th>Transporte</th><th>Fecha</th><th style="text-align:right">Kilos</th></tr>';
+  Object.keys(porMovilFecha).sort().forEach(function(m){
+    Object.keys(porMovilFecha[m]).sort(function(a,b){return b.localeCompare(a);}).forEach(function(f){
+      h+='<tr><td><strong>'+m+'</strong></td><td style="font-size:10px;color:'+TRANSPORTES[movilTransporte[m]].color+';">'+movilTransporte[m]+'</td>'
+        +'<td>'+f+'</td><td style="text-align:right;font-weight:700;">'+Math.round(porMovilFecha[m][f]).toLocaleString('es-CL')+' Kg</td></tr>';
+    });
+  });
+  tbl.innerHTML=h;
+}
+
 function renderLogTabla(){
   var q=(document.getElementById('log-search')||{}).value||'';
   q=q.toLowerCase();
   var data=getFilteredLogData().slice().sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
-  var h='<tr><th>Fecha</th><th>Transporte</th><th>Ruta</th><th style="text-align:right">Kilos</th><th style="text-align:right">Cajas</th><th>Origen</th><th>Subido por</th></tr>';
+  var h='<tr><th>Fecha</th><th>Transporte</th><th>Ruta</th><th>M\u00f3vil</th><th style="text-align:right">Kilos</th><th style="text-align:right">Cajas</th><th>Origen</th><th>Subido por</th></tr>';
   data.forEach(function(d){
-    var txt=(d.fecha+' '+d.transporte+' '+d.ruta+' '+(d.subido_por||'')).toLowerCase();
+    var txt=(d.fecha+' '+d.transporte+' '+d.ruta+' '+(d.movil||'')+' '+(d.subido_por||'')).toLowerCase();
     if(q && txt.indexOf(q)===-1) return;
-    h+='<tr><td>'+d.fecha+'</td><td>'+d.transporte+'</td><td>'+d.ruta+'</td>'
+    h+='<tr><td>'+d.fecha+'</td><td>'+d.transporte+'</td><td>'+d.ruta+'</td><td style="font-size:10px;color:#666">'+(d.movil||'\u2014')+'</td>'
       +'<td style="text-align:right">'+Math.round(d.kilos).toLocaleString('es-CL')+'</td>'
       +'<td style="text-align:right">'+(d.cajas||'\u2014')+'</td>'
-      +'<td style="font-size:10px;color:#888">'+(d.origen==='manual'?'Manual':'Archivo')+'</td>'
+      +'<td style="font-size:10px;color:#888">'+(d.origen==='manual'?'Manual':d.origen==='ejemplo'?'Ejemplo':'Archivo')+'</td>'
       +'<td style="font-size:10px;color:#888">'+(d.subido_por||'\u2014')+'</td></tr>';
   });
   document.getElementById('log-tabla-full').innerHTML=h;
@@ -2804,8 +2908,8 @@ function renderLogTabla(){
 function expLogCSV(){
   var data=getFilteredLogData();
   if(!data.length){ alert('No hay datos en el periodo seleccionado.'); return; }
-  var rows=[['Fecha','Transporte','Ruta','Kilos','Cajas','Origen','Subido por']];
-  data.forEach(function(d){ rows.push([d.fecha,d.transporte,d.ruta,d.kilos,d.cajas||'',d.origen,d.subido_por||'']); });
+  var rows=[['Fecha','Transporte','Ruta','M\u00f3vil','Kilos','Cajas','Origen','Subido por']];
+  data.forEach(function(d){ rows.push([d.fecha,d.transporte,d.ruta,d.movil||'',d.kilos,d.cajas||'',d.origen,d.subido_por||'']); });
   var a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(function(r){return r.join(';');}).join('\n'));
   a.download='logistica_'+logPeriodo+'.csv'; a.click();
