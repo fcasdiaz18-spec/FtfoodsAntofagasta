@@ -86,7 +86,9 @@ tr:hover td{background:#fafafa;}
 .mf{height:100%;border-radius:3px;}
 .mp{font-size:10px;color:#888;width:32px;text-align:right;}
 .mv{font-size:10px;color:#555;width:44px;text-align:right;}
-.bc{background:#fff;border-radius:10px;border:.5px solid #e0e0e0;padding:14px;margin-bottom:10px;}
+.bc{background:#fff;border-radius:10px;border:.5px solid #e0e0e0;padding:12px;margin-bottom:0;}
+.bono-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}
+@media(max-width:800px){.bono-grid{grid-template-columns:1fr;}}
 .pcat{background:#9C1C1C;color:#fff;padding:8px 12px;font-size:11px;font-weight:700;border-radius:6px 6px 0 0;margin-top:10px;}
 .ptbl{border-radius:0 0 8px 8px;margin-bottom:2px;table-layout:fixed;width:100%;}
 .ptbl td{padding:6px 12px;border-bottom:.5px solid #f5f5f5;}
@@ -244,7 +246,7 @@ tr:hover td{background:#fafafa;}
 <div class="page" id="page-clientes"><div class="pi"><div class="sec">Por vendedor y cliente &#8212; Clic para expandir productos</div><div class="fbtns" id="fb-v"></div><input class="sb" id="sb-c" placeholder="Buscar cliente..."><table id="tc"></table></div></div>
 <div class="page" id="page-categorias"><div class="pi"><div class="sec">Mix por categoria</div><div class="fbtns" id="fb-cat-v"><button class="fbtn on" data-n="Todos" onclick="selCat('Todos',this)">Sucursal</button></div><div class="cat-grid"><div><div class="card" style="padding:14px;"><canvas id="c3" height="300"></canvas></div></div><div><table id="tcat"></table></div></div>
 <div class="sec" style="margin-top:18px;">Apertura G2 &#8212; <span id="g2-titulo">Sucursal Antofagasta</span></div>
-<div class="card" style="padding:10px;"><canvas id="c-g2" height="220"></canvas></div>
+<div class="card" style="padding:10px;"><canvas id="c-g2" height="170"></canvas></div>
 
 <div class="sec" style="margin-top:18px;">Buscar producto por c&#243;digo o nombre</div>
 <div class="card" style="padding:12px;">
@@ -255,7 +257,7 @@ tr:hover td{background:#fafafa;}
 </div></div>
 <div class="page" id="page-stock"><div class="pi"><div class="sec">Stock disponible &#8212; 08-07-2026</div><div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;"><input class="sb" id="sb-s" placeholder="Buscar..." style="flex:1;min-width:180px;margin:0"><button class="fbtn" id="fs-u" onclick="filtS('u')" style="color:#C00000;font-weight:700;">&#9888; Urgente</button><button class="fbtn" id="fs-r" onclick="filtS('r')">Critico</button><button class="fbtn" id="fs-y" onclick="filtS('y')">Alerta</button><button class="fbtn" id="fs-g" onclick="filtS('g')">OK</button><button class="fbtn on" id="fs-a" onclick="filtS('')">Todo</button></div><table id="ts"></table></div></div>
 <div class="page" id="page-precios"><div class="pi"><div class="sec">Lista de precios &#8212; Vigencia 29 Jun &#8212; 03 Jul 2026</div><div style="background:#FFF2CC;border:.5px solid #C9A227;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#7D6608;font-weight:600;">Precios netos $/Kg &#183; Verificar stock antes de ofrecer</div><input class="sb" id="sb-p" placeholder="Buscar producto..."><div id="precios"></div></div></div></div>
-<div class="page" id="page-bono"><div class="pi"><div class="sec">Bono de Gesti&#243;n &#8212; Julio 2026</div><div id="foco-bono-box" style="background:#E2EFDA;border:.5px solid #97C459;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#375623;font-weight:600;"></div><div class="fbtns" id="fb-bono"></div><div id="bono"></div></div></div>
+<div class="page" id="page-bono"><div class="pi"><div class="sec">Bono de Gesti&#243;n &#8212; Julio 2026</div><div id="foco-bono-box" style="background:#E2EFDA;border:.5px solid #97C459;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#375623;font-weight:600;"></div><div class="fbtns" id="fb-bono"></div><div id="bono" class="bono-grid"></div></div></div>
 <div class="page" id="page-creditos"><div class="pi">
 <div class="sec">&#128221; Cr&#233;ditos &#8212; Historial de solicitudes</div>
 <!-- Filtros -->
@@ -929,7 +931,9 @@ function buildProdCatIndex(){
       var e=idx[p.cod];
       e.fact+=p.fact;
       e.mgnum+=p.fact*p.mg;
-      e.vendedores[cl.vend]=(e.vendedores[cl.vend]||0)+p.fact;
+      if(!e.vendedores[cl.vend]) e.vendedores[cl.vend]={fact:0,mgnum:0,color:(D.colores&&D.colores[cl.vend])||'#888'};
+      e.vendedores[cl.vend].fact+=p.fact;
+      e.vendedores[cl.vend].mgnum+=p.fact*p.mg;
     });
   });
   prodCatIndex=Object.keys(idx).map(function(k){return idx[k];});
@@ -945,20 +949,42 @@ function buscarProductoCat(){
   }).sort(function(a,b){return b.fact-a.fact;}).slice(0,30);
   if(!res.length){ empty.style.display='block'; empty.textContent='Sin resultados para "'+q+'".'; tbl.style.display='none'; return; }
   empty.style.display='none'; tbl.style.display='';
-  var h='<tr><th>C\u00f3digo</th><th>Producto</th><th style="text-align:right">Fact.</th><th style="text-align:right">Margen %</th><th>Vendedores</th></tr>';
-  res.forEach(function(p){
+  var h='<tr><th>C\u00f3digo</th><th>Producto</th><th style="text-align:right">Fact.</th><th style="text-align:right">Margen %</th><th style="text-align:center">Ranking por vendedor</th></tr>';
+  res.forEach(function(p,idx){
     var mg=p.fact?Math.round(p.mgnum/p.fact*10)/10:0;
-    var vends=Object.keys(p.vendedores).sort(function(a,b){return p.vendedores[b]-p.vendedores[a];})
-      .map(function(v){return v+' ($'+p.vendedores[v].toFixed(2)+'M)';}).join(', ');
-    h+='<tr><td style="font-family:monospace;font-size:10px">'+p.cod+'</td><td><strong>'+p.prod+'</strong></td>'
+    var vendList=Object.keys(p.vendedores).map(function(v){
+      var e=p.vendedores[v];
+      return {nombre:v,fact:e.fact,mg:e.fact?Math.round(e.mgnum/e.fact*10)/10:0,color:e.color};
+    }).sort(function(a,b){return b.fact-a.fact;});
+    var gid='pcrow'+idx;
+    h+='<tr class="grp-row" onclick="togGrpEl2(\''+gid+'\')" style="cursor:pointer">'
+      +'<td style="font-family:monospace;font-size:10px">'+p.cod+'</td><td><strong>'+p.prod+'</strong></td>'
       +'<td style="text-align:right;font-weight:700">$'+p.fact.toFixed(2)+'M</td>'
       +'<td style="text-align:right">'+mg+'%</td>'
-      +'<td style="font-size:10px;color:#666">'+vends+'</td></tr>';
+      +'<td style="text-align:center;color:#888;font-size:11px">'+vendList.length+' vendedor(es) <span class="arr">\u25BC</span></td></tr>';
+    h+='<tr class="det-row det-'+gid+'" style="display:none"><td colspan="5" style="padding:0;">'
+      +'<table style="width:100%;font-size:10px;margin:0;">'
+      +'<tr style="background:#f5f5f5;"><th style="text-align:left;padding-left:24px;">#</th><th style="text-align:left;">Vendedor</th><th style="text-align:right;">Facturaci\u00f3n</th><th style="text-align:right;">Margen %</th><th style="text-align:right;padding-right:12px;">% del producto</th></tr>'
+      +vendList.map(function(vv,i){
+        var pctProd=p.fact?Math.round(vv.fact/p.fact*100):0;
+        var mgColor=vv.mg>=20?'#375623':vv.mg>=10?'#7D6608':'#C00000';
+        return '<tr><td style="padding-left:24px;color:#888;">'+(i+1)+'</td>'
+          +'<td><span class="dot" style="background:'+vv.color+'"></span>'+vv.nombre+'</td>'
+          +'<td style="text-align:right;font-weight:600;">$'+vv.fact.toFixed(2)+'M</td>'
+          +'<td style="text-align:right;color:'+mgColor+';font-weight:700;">'+vv.mg+'%</td>'
+          +'<td style="text-align:right;padding-right:12px;color:#888;">'+pctProd+'%</td></tr>';
+      }).join('')
+      +(vendList.length?'':'<tr><td colspan="5" style="padding:8px 24px;color:#888;">Sin vendedores registrados para este producto.</td></tr>')
+      +'</table></td></tr>';
   });
   tbl.innerHTML=h;
 }
-
-var CLIENTES_HIST={
+function togGrpEl2(gid){
+  document.querySelectorAll('.det-'+gid).forEach(function(r){
+    r.style.display=(r.style.display==='none')?'table-row':'none';
+  });
+}
+      var CLIENTES_HIST={
   'Mayo':{'Aníbal Marín':74,'Apolonides Agurto':38,'Carolina Aracena':32,'Helen Carreño':72,'Hernán Angulo':86,'Katherine Merino':8,'Viviangel Sánchez':62},
   'Junio':{'Aníbal Marín':69,'Apolonides Agurto':37,'Carolina Aracena':31,'Helen Carreño':68,'Hernán Angulo':71,'Katherine Merino':9,'Viviangel Sánchez':57}
 };
@@ -983,6 +1009,18 @@ function renderClientesHist(){
       +'<td style="text-align:center">'+mayo+'</td><td style="text-align:center">'+junio+'</td><td style="text-align:center;font-weight:700">'+julio+'</td>'
       +'<td>'+trend+'</td><td style="font-size:10px">'+ritmoTxt+'</td></tr>';
   });
+  var totMayo=0,totJunio=0,totJulio=0;
+  Object.keys(CLIENTES_HIST.Mayo).forEach(function(n){totMayo+=CLIENTES_HIST.Mayo[n];});
+  Object.keys(CLIENTES_HIST.Junio).forEach(function(n){totJunio+=CLIENTES_HIST.Junio[n];});
+  D.vendedores.forEach(function(v){totJulio+=v.n_cli||0;});
+  var totRitmoPct=totJunio?Math.round(totJulio/totJunio*100):0;
+  h+='<tr style="background:#1F1F1F;color:#fff;font-weight:700;">'
+    +'<td>TOTAL SUCURSAL</td>'
+    +'<td style="text-align:center">'+totMayo+'</td>'
+    +'<td style="text-align:center">'+totJunio+'</td>'
+    +'<td style="text-align:center">'+totJulio+'</td>'
+    +'<td>'+(totJunio>totMayo?'\u25B2 +'+(totJunio-totMayo):totJunio<totMayo?'\u25BC '+(totJunio-totMayo):'\u2192 Igual')+'</td>'
+    +'<td style="font-size:10px">'+totRitmoPct+'% de junio</td></tr>';
   tbl.innerHTML=h;
 
   var box=document.getElementById('vend-insights-box');
@@ -1110,7 +1148,7 @@ var g2Chart=null;
 function buildG2Chart(n){
   n = n || 'Todos';
   var data = (n==='Todos') ? (D.g2_global||[]) : (D.g2_por_vend[n]||[]);
-  data = data.filter(function(x){return x.fact>0;}).slice(0,12);
+  data = data.filter(function(x){return x.fact>0;}).slice(0,8);
   var tEl=document.getElementById('g2-titulo');
   if(tEl) tEl.textContent = n==='Todos' ? 'Sucursal Antofagasta' : n;
   if(!data.length){ if(g2Chart){g2Chart.destroy();g2Chart=null;} return; }
@@ -1119,7 +1157,7 @@ function buildG2Chart(n){
   g2Chart=new Chart(document.getElementById('c-g2'),{
     type:'bar',
     data:{labels:data.map(function(x){return x.label;}),
-      datasets:[{data:data.map(function(x){return x.fact;}),backgroundColor:colors,borderRadius:4,barThickness:18}]},
+      datasets:[{data:data.map(function(x){return x.fact;}),backgroundColor:colors,borderRadius:3,barThickness:13}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       scales:{
         x:{beginAtZero:true,title:{display:true,text:'Facturaci\u00f3n MM$',font:{size:10}},ticks:{font:{size:9}}},
@@ -1693,16 +1731,20 @@ document.addEventListener('DOMContentLoaded',function(){
     var ini=vn.split(' ').slice(0,2).map(function(w){return w[0];}).join('');
     var isV=mt.es_vivi;
     var rec=D.bono.rec[vn]?D.bono.rec[vn].n:0;
-    function ir(lbl,av,mtxt,extra,pct){
-      return '<div style="padding:10px;background:#fafafa;border-radius:8px;margin-bottom:8px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
-        +'<div style="font-size:12px;font-weight:600">'+lbl+'</div>'
-        +'<div style="display:flex;gap:6px;align-items:center">'
-        +'<span style="font-size:11px;color:#888">Meta: <strong>'+mtxt+'</strong></span>'+bdg(pct)+'</div></div>'
-        +'<div style="display:flex;gap:8px;align-items:center">'
-        +'<div style="font-size:22px;font-weight:700;color:'+bc(pct)+';min-width:80px">'+av+'</div>'
-        +'<div style="flex:1"><div class="bar"><div class="bf" style="width:'+Math.min(pct,100)+'%;background:'+bc(pct)+'"></div></div>'
-        +'<div style="font-size:10px;color:#888;margin-top:2px">'+pct+'% &middot; '+extra+'</div></div></div></div>';
+    function ir(lbl,av,mtxt,extra,pct,icon){
+      icon=icon||'\u{1F4CA}';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid #f5f5f5;">'
+        +'<div style="font-size:15px;width:20px;text-align:center;flex-shrink:0;">'+icon+'</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:3px;">'
+        +'<span style="font-size:11px;font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+lbl+'</span>'
+        +'<span style="font-size:9px;color:#aaa;white-space:nowrap;">Meta '+mtxt+'</span></div>'
+        +'<div class="bar" style="height:5px;"><div class="bf" style="width:'+Math.min(pct,100)+'%;background:'+bc(pct)+'"></div></div>'
+        +'</div>'
+        +'<div style="text-align:right;min-width:54px;flex-shrink:0;">'
+        +'<div style="font-size:13px;font-weight:800;color:'+bc(pct)+';line-height:1.1;">'+av+'</div>'
+        +'<div style="font-size:9px;color:#999;">'+pct+'%</div></div>'
+        +'</div>';
     }
     function irRec(lbl,av,mtxt,extra,pct,vn2){
       var rid='rec-'+vn2.replace(/[^a-zA-Z0-9]/g,'');
@@ -1711,16 +1753,20 @@ document.addEventListener('DOMContentLoaded',function(){
         return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:.5px solid #eee;font-size:11px">'
           +'<span>'+c.cli+'</span><span style="color:#888">'+c.kg.toFixed(1)+' Kg &middot; $'+c.fact+'M</span></div>';
       }).join(''):'<div style="font-size:11px;color:#888;padding:4px 0">Sin clientes recuperados este mes.</div>';
-      return '<div style="padding:10px;background:#fafafa;border-radius:8px;margin-bottom:8px;cursor:pointer" onclick="tog(\''+rid+'\')">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
-        +'<div style="font-size:12px;font-weight:600">'+lbl+' &#9662;</div>'
-        +'<div style="display:flex;gap:6px;align-items:center">'
-        +'<span style="font-size:11px;color:#888">Meta: <strong>'+mtxt+'</strong></span>'+bdg(pct)+'</div></div>'
-        +'<div style="display:flex;gap:8px;align-items:center">'
-        +'<div style="font-size:22px;font-weight:700;color:'+bc(pct)+';min-width:80px">'+av+'</div>'
-        +'<div style="flex:1"><div class="bar"><div class="bf" style="width:'+Math.min(pct,100)+'%;background:'+bc(pct)+'"></div></div>'
-        +'<div style="font-size:10px;color:#888;margin-top:2px">'+pct+'% &middot; '+extra+'</div></div></div>'
-        +'<div id="'+rid+'" class="cc" style="margin-top:8px;" onclick="event.stopPropagation()">'+listHtml+'</div></div>';
+      return '<div style="cursor:pointer" onclick="tog(\''+rid+'\')">'
+        +'<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:.5px solid #f5f5f5;">'
+        +'<div style="font-size:15px;width:20px;text-align:center;flex-shrink:0;">\u{1F504}</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:3px;">'
+        +'<span style="font-size:11px;font-weight:600;color:#333;">'+lbl+' <span style="color:#7030A0;">&#9662;</span></span>'
+        +'<span style="font-size:9px;color:#aaa;white-space:nowrap;">Meta '+mtxt+'</span></div>'
+        +'<div class="bar" style="height:5px;"><div class="bf" style="width:'+Math.min(pct,100)+'%;background:'+bc(pct)+'"></div></div>'
+        +'</div>'
+        +'<div style="text-align:right;min-width:54px;flex-shrink:0;">'
+        +'<div style="font-size:13px;font-weight:800;color:'+bc(pct)+';line-height:1.1;">'+av+'</div>'
+        +'<div style="font-size:9px;color:#999;">'+pct+'%</div></div>'
+        +'</div>'
+        +'<div id="'+rid+'" class="cc" style="margin-bottom:6px;" onclick="event.stopPropagation()">'+listHtml+'</div></div>';
     }
     bn+='<div class="bc" data-vend="'+vn+'">'
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:.5px solid #f0f0f0">'
@@ -1733,17 +1779,17 @@ document.addEventListener('DOMContentLoaded',function(){
       var kgf=D.bono.kg_fs[vn]||0; var mfs=mt.fs_kg||100; var pf=Math.min(Math.round(kgf/mfs*100),100);
       var mgR=D.bono.mg_pct[vn]||0; var mgO=mt.mg_obj||16; var pmg=Math.min(Math.round(mgR/mgO*100),100);
       var mr=mt.rec||7; var pr2=Math.min(Math.round(rec/mr*100),100);
-      bn+=ir('Clientes concretados cartera',cli2+' clientes',mc2+' clientes','Clientes activos en cartera',pc);
-      bn+=ir('Kilos Fundo Sur (total lineas)',kgf.toFixed(1)+' Kg',mfs+' Kg','Todas las lineas FS',pf);
-      bn+=ir('Margen bruto % objetivo',mgR.toFixed(1)+'%',mgO+'%','Margen bruto total mes',pmg);
+      bn+=ir('Clientes concretados cartera',cli2+' clientes',mc2+' clientes','Clientes activos en cartera',pc,'\u{1F465}');
+      bn+=ir('Kilos Fundo Sur (total lineas)',kgf.toFixed(1)+' Kg',mfs+' Kg','Todas las lineas FS',pf,'\u{1F4E6}');
+      bn+=ir('Margen bruto % objetivo',mgR.toFixed(1)+'%',mgO+'%','Margen bruto total mes',pmg,'\u{1F4B0}');
       bn+=irRec('Clientes recuperados',rec+' clientes',mr+' clientes','Sin venta May ni Jun, activos Jul',pr2,vn);
     } else {
       var ke=D.bono.kg_esc[vn]||0; var kt=D.bono.kg_tir[vn]||0; var kr=(D.bono.kg_rinon&&D.bono.kg_rinon[vn])||0;
       var me=mt.esc||50; var mtt=mt.tir||40; var mri=mt.rinon||150; var mr2=mt.rec||5;
       var pe=Math.min(Math.round(ke/me*100),100); var pt=Math.min(Math.round(kt/mtt*100),100); var pri=Math.min(Math.round(kr/mri*100),100); var pr3=Math.min(Math.round(rec/mr2*100),100);
-      bn+=ir('Kilos Crocante (FS)',ke.toFixed(1)+' Kg',me+' Kg','SKU 17075',pe);
-      bn+=ir('Kilos Ri\u00f1\u00f3n de Cerdo',kr.toFixed(1)+' Kg',mri+' Kg','Ri\u00f1\u00f3n de Cerdo',pri);
-      bn+=ir('Kilos Tiritas/Cubitos/Osobuco (FS)',kt.toFixed(1)+' Kg',mtt+' Kg','SKU 17077 + 17078 + 11258',pt);
+      bn+=ir('Kilos Crocante (FS)',ke.toFixed(1)+' Kg',me+' Kg','SKU 17075',pe,'\u{1F356}');
+      bn+=ir('Kilos Ri\u00f1\u00f3n de Cerdo',kr.toFixed(1)+' Kg',mri+' Kg','Ri\u00f1\u00f3n de Cerdo',pri,'\u{1F437}');
+      bn+=ir('Kilos Tiritas/Cubitos/Osobuco (FS)',kt.toFixed(1)+' Kg',mtt+' Kg','SKU 17077 + 17078 + 11258',pt,'\u{1F969}');
       bn+=irRec('Clientes recuperados',rec+' clientes',mr2+' clientes','Sin venta May ni Jun, activos Jul',pr3,vn);
     }
     bn+='</div>';
