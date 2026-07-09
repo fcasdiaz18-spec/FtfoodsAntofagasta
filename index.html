@@ -230,7 +230,16 @@ tr:hover td{background:#fafafa;}
 </div>
 </div></div>
 <div class="page" id="page-metas"><div class="pi"><div class="sec">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl">Dias restantes (J16 feriado)</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
-<div class="page" id="page-vendedores"><div class="pi"><div class="sec">Desempeno individual &#8212; Clic en fila para ver detalle</div><div class="vend-grid"><table id="tv"></table><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div><div id="vcs"></div></div></div>
+<div class="page" id="page-vendedores"><div class="pi"><div class="sec">Desempeno individual &#8212; Clic en fila para ver detalle</div><div class="vend-grid"><table id="tv"></table><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div>
+
+<div class="sec" style="margin-top:18px;">Evoluci&#243;n de clientes concretados &#8212; Mayo a Julio</div>
+<div style="background:#EFF4FF;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#1F4E79;">
+  Julio muestra el conteo al d&#237;a actual del mes (a&#250;n en curso). No hay datos de Abril disponibles en el panel.
+</div>
+<table id="tv-clientes-hist" style="font-size:11px;margin-bottom:12px;"></table>
+<div id="vend-insights-box" style="display:none;margin-bottom:14px;"></div>
+
+<div id="vcs"></div></div></div>
 <div class="page" id="page-clientes"><div class="pi"><div class="sec">Por vendedor y cliente &#8212; Clic para expandir productos</div><div class="fbtns" id="fb-v"></div><input class="sb" id="sb-c" placeholder="Buscar cliente..."><table id="tc"></table></div></div>
 <div class="page" id="page-categorias"><div class="pi"><div class="sec">Mix por categoria</div><div class="fbtns" id="fb-cat-v"><button class="fbtn on" data-n="Todos" onclick="selCat('Todos',this)">Sucursal</button></div><div class="cat-grid"><div><div class="card" style="padding:14px;"><canvas id="c3" height="300"></canvas></div></div><div><table id="tcat"></table></div></div>
 <div class="sec" style="margin-top:18px;">Apertura G2 &#8212; <span id="g2-titulo">Sucursal Antofagasta</span></div>
@@ -676,6 +685,7 @@ if(fsAuth){
       var ub=document.getElementById('user-badge');
       if(ub) ub.textContent=(isAdmin?'\u2605 Administrador \u00b7 ':'')+(user.email||'');
       logAcceso(user);
+      if(typeof renderClientesHist==='function') renderClientesHist();
     }else{
       document.body.classList.add('locked');
       isAdmin=false;
@@ -944,6 +954,59 @@ function buscarProductoCat(){
       +'<td style="font-size:10px;color:#666">'+vends+'</td></tr>';
   });
   tbl.innerHTML=h;
+}
+
+var CLIENTES_HIST={
+  'Mayo':{'Aníbal Marín':74,'Apolonides Agurto':38,'Carolina Aracena':32,'Helen Carreño':72,'Hernán Angulo':86,'Katherine Merino':8,'Viviangel Sánchez':62},
+  'Junio':{'Aníbal Marín':69,'Apolonides Agurto':37,'Carolina Aracena':31,'Helen Carreño':68,'Hernán Angulo':71,'Katherine Merino':9,'Viviangel Sánchez':57}
+};
+function renderClientesHist(){
+  var tbl=document.getElementById('tv-clientes-hist');
+  if(!tbl) return;
+  var k=D.kpis;
+  var h='<tr><th>Vendedor</th><th style="text-align:center">Mayo</th><th style="text-align:center">Junio</th><th style="text-align:center">Julio (al d\u00eda '+k.dias_trabajados+')</th><th>Tendencia May&#8594;Jun</th><th>Ritmo Julio vs esperado</th></tr>';
+  var esperadoPct=Math.round(k.dias_trabajados/k.dias_totales*100);
+  D.vendedores.slice().sort(function(a,b){return b.fact-a.fact;}).forEach(function(v){
+    var mayo=CLIENTES_HIST.Mayo[v.nombre]||0;
+    var junio=CLIENTES_HIST.Junio[v.nombre]||0;
+    var julio=v.n_cli||0;
+    var trend = junio>mayo?'<span style="color:#375623;font-weight:700">&#9650; +'+(junio-mayo)+'</span>'
+      : junio<mayo?'<span style="color:#C00000;font-weight:700">&#9660; '+(junio-mayo)+'</span>'
+      : '<span style="color:#888;">&#8594; Igual</span>';
+    var ritmoPct=junio?Math.round(julio/junio*100):0;
+    var ritmoTxt = ritmoPct>esperadoPct+10 ? '<span style="color:#375623;font-weight:700">&#9650; '+ritmoPct+'% de junio (adelantado)</span>'
+      : ritmoPct<esperadoPct-10 ? '<span style="color:#C00000;font-weight:700">&#9660; '+ritmoPct+'% de junio (atrasado)</span>'
+      : '<span style="color:#7D6608;">&#8594; '+ritmoPct+'% de junio (en l\u00ednea, esperado ~'+esperadoPct+'%)</span>';
+    h+='<tr><td><span class="dot" style="background:'+v.color+'"></span><strong>'+v.nombre+'</strong></td>'
+      +'<td style="text-align:center">'+mayo+'</td><td style="text-align:center">'+junio+'</td><td style="text-align:center;font-weight:700">'+julio+'</td>'
+      +'<td>'+trend+'</td><td style="font-size:10px">'+ritmoTxt+'</td></tr>';
+  });
+  tbl.innerHTML=h;
+
+  var box=document.getElementById('vend-insights-box');
+  if(!box) return;
+  if(!isAdmin){ box.style.display='none'; return; }
+  box.style.display='';
+  var msgs=[];
+  D.vendedores.forEach(function(v){
+    var mayo=CLIENTES_HIST.Mayo[v.nombre]||0, junio=CLIENTES_HIST.Junio[v.nombre]||0, julio=v.n_cli||0;
+    var pctVsJunio=junio?Math.round(julio/junio*100):0;
+    if(junio>mayo && pctVsJunio>=esperadoPct+10){
+      msgs.push('<strong>'+v.nombre+'</strong>: viene mejorando (Mayo '+mayo+' \u2192 Junio '+junio+') y en julio ya lleva un ritmo por sobre lo esperado. Buen momento para reforzar positivamente.');
+    } else if(junio<mayo && pctVsJunio<esperadoPct-10){
+      msgs.push('<strong>'+v.nombre+'</strong>: viene bajando (Mayo '+mayo+' \u2192 Junio '+junio+') y julio parte lento tambi\u00e9n. Vale la pena conversar para entender qu\u00e9 est\u00e1 pasando con su cartera.');
+    } else if(junio<mayo && pctVsJunio>=esperadoPct+10){
+      msgs.push('<strong>'+v.nombre+'</strong>: hab\u00eda bajado en junio, pero julio arranca con buen ritmo &mdash; posible se\u00f1al de recuperaci\u00f3n.');
+    } else if(junio>=mayo && pctVsJunio<esperadoPct-10){
+      msgs.push('<strong>'+v.nombre+'</strong>: ven\u00eda estable o mejorando, pero julio parte m\u00e1s lento de lo esperado &mdash; a\u00fan es temprano en el mes, pero conviene monitorear.');
+    }
+  });
+  if(!msgs.length) msgs.push('No se detectan tendencias marcadas de mejora o deterioro en la cartera de clientes por vendedor este mes.');
+  document.getElementById('vend-insights-box').innerHTML=
+    '<div class="sec" style="color:#7030A0;">&#10024; Insights de cartera (solo administrador)</div>'
+    +'<div style="background:#F5F0FA;border:.5px solid #7030A0;border-radius:8px;padding:14px;font-size:12px;color:#4A2E6B;line-height:1.7;">'
+    +msgs.map(function(m){return '<div style="margin-bottom:6px;">&#8226; '+m+'</div>';}).join('')
+    +'<div style="font-size:10px;color:#888;margin-top:8px;border-top:.5px solid #ddd;padding-top:6px;">An\u00e1lisis autom\u00e1tico basado en reglas sobre conteo de clientes por mes (no es una consulta en vivo a un modelo de IA).</div></div>';
 }
 
 function selCat(n,el){
@@ -1404,8 +1467,9 @@ document.addEventListener('DOMContentLoaded',function(){
     +'<tr><td><strong>Resultado Op.</strong></td><td><strong>$'+k.meta_ro+'M</strong></td><td style="color:'+( k.avance_ro>=100?'#375623':'#C00000')+';font-weight:700">$'+k.ro+'M</td><td><span class="badge '+(k.avance_ro>=100?'bg':'ba')+'">'+k.avance_ro+'%</span></td></tr>';
 
   // Tabla vendedores
-  var vtr='<tr><th>Vendedor</th><th>Facturacion</th><th>Kilos</th><th>Margen $</th><th>Margen %</th><th>Part. %</th></tr>';
+  var vtr='<tr><th>Vendedor</th><th>Facturacion</th><th>Kilos</th><th>Margen $</th><th>Margen %</th><th>Part. %</th><th>Clientes</th></tr>';
   var vendTotalFact=D.vendedores.reduce(function(s,v){return s+v.fact;},0)||1;
+  var vendTotalCli=D.vendedores.reduce(function(s,v){return s+(v.n_cli||0);},0);
   var vendSorted=D.vendedores.slice().sort(function(a,b){return b.fact-a.fact;});
   vendSorted.forEach(function(v){
     var mb=v.margen_pct>=18?'bg':v.margen_pct>=14?'ba':'br';
@@ -1416,9 +1480,15 @@ document.addEventListener('DOMContentLoaded',function(){
       +'<td>'+v.kg.toLocaleString('es-CL')+' Kg</td>'
       +'<td>$'+v.margen_clp+'M</td>'
       +'<td><span class="badge '+mb+'">'+v.margen_pct+'%</span></td>'
-      +'<td>'+partPct+'%</td></tr>';
+      +'<td>'+partPct+'%</td>'
+      +'<td style="text-align:center;font-weight:700">'+(v.n_cli||0)+'</td></tr>';
   });
+  vtr+='<tr style="background:#1F1F1F;color:#fff;font-weight:700;">'
+    +'<td>TOTAL SUCURSAL</td><td>$'+D.kpis.fact+'M</td><td>'+Number(D.kpis.kg).toLocaleString('es-CL')+' Kg</td>'
+    +'<td>$'+D.kpis.margen+'M</td><td>'+D.kpis.margen_pct+'%</td><td>100%</td>'
+    +'<td style="text-align:center">'+vendTotalCli+'</td></tr>';
   document.getElementById('tv').innerHTML=vtr;
+  renderClientesHist();
 
   // Cards vendedores
   var vch='';
