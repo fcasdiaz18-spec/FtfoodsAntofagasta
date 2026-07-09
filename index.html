@@ -127,6 +127,7 @@ tr:hover td{background:#fafafa;}
 .gauge-card{background:#fff;border-radius:8px;padding:6px 4px;text-align:center;}
 .gauge-lbl{font-size:10px;font-weight:700;margin-bottom:4px;}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulseLive{0%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(1.4);}100%{opacity:1;transform:scale(1);}}
 @media(max-width:768px){.g4{grid-template-columns:1fr 1fr;}.g3{grid-template-columns:1fr 1fr;}.g2{grid-template-columns:1fr;}.vkpis{grid-template-columns:1fr 1fr;}.gauge-grid{grid-template-columns:1fr 1fr;}table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}}.page{overflow-x:hidden;}@media(max-width:768px) and (orientation:portrait){.tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;}.tab{white-space:nowrap;flex-shrink:0;}.pi{overflow-x:auto;-webkit-overflow-scrolling:touch;}}@media(max-width:480px){.page img:first-child{max-height:160px;min-height:110px;object-position:center 20%;}}
 </style>
 </head>
@@ -230,7 +231,7 @@ tr:hover td{background:#fafafa;}
 </div>
 </div></div>
 <div class="page" id="page-metas"><div class="pi"><div class="sec">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl">Dias restantes (J16 feriado)</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
-<div class="page" id="page-vendedores"><div class="pi"><div class="sec">Desempeno individual &#8212; Clic en fila para ver detalle</div><div class="vend-grid"><table id="tv"></table><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div>
+<div class="page" id="page-vendedores"><div class="pi"><div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">Desempeno individual &#8212; Clic en fila para ver detalle <span id="vend-total-clientes-badge" style="font-size:11px;font-weight:700;background:#EFF4FF;color:#1F4E79;padding:4px 10px;border-radius:12px;"></span></div><div class="vend-grid"><table id="tv"></table><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div>
 
 <div class="sec" style="margin-top:18px;">Evoluci&#243;n de clientes concretados &#8212; Mayo a Julio</div>
 <div style="background:#EFF4FF;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11px;color:#1F4E79;">
@@ -591,6 +592,7 @@ function go(n,el){
   if(el) el.classList.add('on');
   if(n==='creditos') renderCred();
   if(n==='admin') renderAdmin();
+  if(n==='vendedores' && typeof renderClientesHist==='function') renderClientesHist();
   if(n==='historico') renderHist();
   if(n==='seguridad') renderAccesos();
   if(n==='logistica') renderLogistica();
@@ -987,26 +989,75 @@ function renderClientesHist(){
   if(!box) return;
   if(!isAdmin){ box.style.display='none'; return; }
   box.style.display='';
-  var msgs=[];
+  box.innerHTML='<div class="sec" style="color:#7030A0;display:flex;align-items:center;gap:8px;">'
+    +'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#7030A0;animation:pulseLive 1.4s infinite;"></span>'
+    +'Insights (solo administrador) <span style="font-weight:400;font-size:10px;color:#888;">analizando tendencias...</span></div>'
+    +'<div style="background:#F5F0FA;border:.5px solid #7030A0;border-radius:8px;padding:14px;font-size:12px;color:#4A2E6B;">Cargando...</div>';
+
+  var vendTotalFactIns=D.vendedores.reduce(function(s,v){return s+v.fact;},0)||1;
+  var avgMargen=D.kpis.margen_pct;
+  var msgsCli=[], msgsMargen=[], msgsKilos=[];
+
   D.vendedores.forEach(function(v){
     var mayo=CLIENTES_HIST.Mayo[v.nombre]||0, junio=CLIENTES_HIST.Junio[v.nombre]||0, julio=v.n_cli||0;
     var pctVsJunio=junio?Math.round(julio/junio*100):0;
     if(junio>mayo && pctVsJunio>=esperadoPct+10){
-      msgs.push('<strong>'+v.nombre+'</strong>: viene mejorando (Mayo '+mayo+' \u2192 Junio '+junio+') y en julio ya lleva un ritmo por sobre lo esperado. Buen momento para reforzar positivamente.');
+      msgsCli.push('<strong>'+v.nombre+'</strong> viene mejorando en cartera (Mayo '+mayo+' \u2192 Junio '+junio+') y julio ya lleva ritmo por sobre lo esperado.');
     } else if(junio<mayo && pctVsJunio<esperadoPct-10){
-      msgs.push('<strong>'+v.nombre+'</strong>: viene bajando (Mayo '+mayo+' \u2192 Junio '+junio+') y julio parte lento tambi\u00e9n. Vale la pena conversar para entender qu\u00e9 est\u00e1 pasando con su cartera.');
+      msgsCli.push('<strong>'+v.nombre+'</strong> viene bajando en cartera (Mayo '+mayo+' \u2192 Junio '+junio+') y julio parte lento tambi\u00e9n. Vale la pena conversar.');
     } else if(junio<mayo && pctVsJunio>=esperadoPct+10){
-      msgs.push('<strong>'+v.nombre+'</strong>: hab\u00eda bajado en junio, pero julio arranca con buen ritmo &mdash; posible se\u00f1al de recuperaci\u00f3n.');
+      msgsCli.push('<strong>'+v.nombre+'</strong> hab\u00eda bajado en junio, pero julio arranca con buen ritmo \u2014 posible recuperaci\u00f3n.');
     } else if(junio>=mayo && pctVsJunio<esperadoPct-10){
-      msgs.push('<strong>'+v.nombre+'</strong>: ven\u00eda estable o mejorando, pero julio parte m\u00e1s lento de lo esperado &mdash; a\u00fan es temprano en el mes, pero conviene monitorear.');
+      msgsCli.push('<strong>'+v.nombre+'</strong> ven\u00eda estable, pero julio parte m\u00e1s lento de lo esperado en clientes.');
     }
+    // Margen
+    var diffMargen=Math.round((v.margen_pct-avgMargen)*10)/10;
+    if(diffMargen>=3){
+      msgsMargen.push('<strong>'+v.nombre+'</strong> tiene margen de '+v.margen_pct+'%, '+diffMargen+' pts sobre el promedio de sucursal ('+avgMargen+'%) \u2014 buena mezcla de productos.');
+    } else if(diffMargen<=-3){
+      msgsMargen.push('<strong>'+v.nombre+'</strong> tiene margen de '+v.margen_pct+'%, '+Math.abs(diffMargen)+' pts bajo el promedio de sucursal ('+avgMargen+'%) \u2014 revisar mezcla o descuentos.');
+    }
+    // Kilos / avance de facturacion individual vs ritmo esperado del mes
+    var partFact=Math.round(v.fact/vendTotalFactIns*100);
+    var avanceIndiv=D.kpis.meta_fact?Math.round(v.fact/(D.kpis.meta_fact*(partFact/100||0.01))*100):0;
   });
-  if(!msgs.length) msgs.push('No se detectan tendencias marcadas de mejora o deterioro en la cartera de clientes por vendedor este mes.');
-  document.getElementById('vend-insights-box').innerHTML=
-    '<div class="sec" style="color:#7030A0;">&#10024; Insights de cartera (solo administrador)</div>'
-    +'<div style="background:#F5F0FA;border:.5px solid #7030A0;border-radius:8px;padding:14px;font-size:12px;color:#4A2E6B;line-height:1.7;">'
-    +msgs.map(function(m){return '<div style="margin-bottom:6px;">&#8226; '+m+'</div>';}).join('')
-    +'<div style="font-size:10px;color:#888;margin-top:8px;border-top:.5px solid #ddd;padding-top:6px;">An\u00e1lisis autom\u00e1tico basado en reglas sobre conteo de clientes por mes (no es una consulta en vivo a un modelo de IA).</div></div>';
+
+  // Kilos: comparar avance de kilos de la sucursal vs dias transcurridos (contexto general)
+  var kilosMsg = D.kpis.avance_k >= esperadoPct+10
+    ? 'La sucursal lleva '+D.kpis.avance_k+'% de la meta de kilos, por sobre el ritmo esperado a estas alturas del mes ('+esperadoPct+'%).'
+    : D.kpis.avance_k <= esperadoPct-10
+      ? 'La sucursal lleva '+D.kpis.avance_k+'% de la meta de kilos, por debajo del ritmo esperado a estas alturas del mes ('+esperadoPct+'%).'
+      : 'El avance de kilos de la sucursal ('+D.kpis.avance_k+'%) va en l\u00ednea con el ritmo esperado del mes ('+esperadoPct+'%).';
+  msgsKilos.push(kilosMsg);
+  var margenMsg = D.kpis.avance_mgpct>=100
+    ? 'El margen % de la sucursal ('+D.kpis.margen_pct+'%) ya alcanz\u00f3 la meta mensual ('+D.kpis.meta_mg_pct+'%).'
+    : 'El margen % de la sucursal ('+D.kpis.margen_pct+'%) todav\u00eda est\u00e1 '+(D.kpis.meta_mg_pct-D.kpis.margen_pct).toFixed(1)+' pts bajo la meta ('+D.kpis.meta_mg_pct+'%).';
+  msgsMargen.unshift(margenMsg);
+
+  if(!msgsCli.length) msgsCli.push('Sin tendencias marcadas de mejora o deterioro en cartera de clientes este mes.');
+  if(msgsMargen.length===1) msgsMargen.push('Sin vendedores con margen notablemente por sobre o bajo el promedio de sucursal.');
+
+  function bloque(titulo,icono,msgs){
+    return '<div style="margin-bottom:12px;"><div style="font-weight:700;font-size:11px;color:#4A2E6B;margin-bottom:4px;">'+icono+' '+titulo+'</div>'
+      +msgs.map(function(m){return '<div style="margin-bottom:5px;padding-left:4px;">&#8226; '+m+'</div>';}).join('')
+      +'</div>';
+  }
+
+  setTimeout(function(){
+    var content=document.getElementById('vend-insights-content');
+    if(!content) return;
+    content.innerHTML=
+      bloque('Clientes','\u{1F465}',msgsCli)
+      +bloque('Margen','\u{1F4B0}',msgsMargen)
+      +bloque('Kilos','\u2696\ufe0f',msgsKilos)
+      +'<div style="font-size:10px;color:#888;margin-top:8px;border-top:.5px solid #ddd;padding-top:6px;">\u00daltima actualizaci\u00f3n: '+new Date().toLocaleString('es-CL')+'. An\u00e1lisis autom\u00e1tico basado en reglas sobre los datos cargados (no es una consulta en vivo a un modelo de IA).</div>';
+  },400);
+
+  box.innerHTML='<div class="sec" style="color:#7030A0;display:flex;align-items:center;gap:8px;">'
+    +'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#375623;box-shadow:0 0 6px #375623;"></span>'
+    +'Insights (solo administrador) <span style="font-weight:400;font-size:10px;color:#375623;">&#9679; en l\u00ednea</span></div>'
+    +'<div id="vend-insights-content" style="background:#F5F0FA;border:.5px solid #7030A0;border-radius:8px;padding:14px;font-size:12px;color:#4A2E6B;line-height:1.6;">'
+    +'<div style="color:#888;">Generando an\u00e1lisis...</div></div>';
 }
 
 function selCat(n,el){
@@ -1488,6 +1539,8 @@ document.addEventListener('DOMContentLoaded',function(){
     +'<td>$'+D.kpis.margen+'M</td><td>'+D.kpis.margen_pct+'%</td><td>100%</td>'
     +'<td style="text-align:center">'+vendTotalCli+'</td></tr>';
   document.getElementById('tv').innerHTML=vtr;
+  var badgeCli=document.getElementById('vend-total-clientes-badge');
+  if(badgeCli) badgeCli.textContent='\u{1F465} '+vendTotalCli+' clientes concretados en la sucursal';
   renderClientesHist();
 
   // Cards vendedores
@@ -1503,7 +1556,7 @@ document.addEventListener('DOMContentLoaded',function(){
         +'<span style="color:#444">'+(i+1)+'. '+p.prod+'</span>'
         +'<span style="font-weight:600;color:'+v.color+'">$'+p.val+'M</span></div>';
     }).join('');
-    var cr=(v.clientes||[]).map(function(c){
+    var cr=(v.clientes||[]).slice(0,10).map(function(c){
       var mb=c.mg>=18?'bg':c.mg>=12?'ba':'br';
       return '<tr><td style="font-size:11px">'+c.cli+'</td>'
         +'<td style="text-align:right">$'+c.fact+'M</td>'
@@ -1530,9 +1583,8 @@ document.addEventListener('DOMContentLoaded',function(){
       +'<div class="bar"><div class="bf" style="width:'+pr+'%;background:'+bc(pr)+'"></div></div>'
       +'</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
-      +'<div><div class="mt">Mix Categorias</div>'+mix
-      +'<div class="mt">Top 10 Productos</div>'+(top||'<div style="font-size:11px;color:#888;padding:8px 0">Sin datos</div>')+'</div>'
-      +'<div><div class="mt">Top Clientes</div>'
+      +'<div><div class="mt">Top 10 Productos</div>'+(top||'<div style="font-size:11px;color:#888;padding:8px 0">Sin datos</div>')+'</div>'
+      +'<div><div class="mt">Top 10 Clientes</div>'
       +'<table style="font-size:11px;margin:0"><tr><th>Cliente</th><th>Fact.</th><th>Mg%</th></tr>'+cr+'</table></div>'
       +'</div>'
       +'</div></div>';
