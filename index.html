@@ -997,17 +997,41 @@ function renderStockTrendBox(){
     html+='<tr class="det-'+gid+'" style="display:none;"><td colspan="5" style="padding:0;">'
       +'<table style="width:100%;font-size:10px;margin:0;"><tr style="background:#f5f5f5;">'
       +'<th style="text-align:left;padding-left:24px;">C\u00f3digo</th><th style="text-align:left;">Producto</th>'
-      +'<th style="text-align:right;">Hoy</th><th style="text-align:right;">Hace 1 sem</th><th style="text-align:right;padding-right:12px;">Hace 2 sem</th></tr>'
+      +'<th style="text-align:right;">Hoy</th><th style="text-align:right;">Hace 1 sem</th><th style="text-align:right;">Hace 2 sem</th>'
+      +'<th style="text-align:right;">Var. Kg</th><th style="text-align:right;">Var. %</th><th style="text-align:center;">Tendencia</th><th style="text-align:center;padding-right:12px;">\u25CF</th></tr>'
       +prods.map(function(p){
+        var varKg=Math.round((p.hoy-p.hace_1sem)*10)/10;
+        var varPct=p.hace_1sem>0.5?Math.round((p.hoy-p.hace_1sem)/p.hace_1sem*100):null;
+        var semColor, semDot;
+        if(varPct===null){ semColor='#888'; semDot='\u26AA'; }
+        else if(varPct<=-25){ semColor='#C00000'; semDot='\u{1F534}'; }
+        else if(varPct<=-10){ semColor='#C9A227'; semDot='\u{1F7E1}'; }
+        else { semColor='#375623'; semDot='\u{1F7E2}'; }
+        // Linea de tendencia simple: regresion lineal sobre 3 puntos (semana 0,1,2)
+        var y0=p.hace_2sem, y1=p.hace_1sem, y2=p.hoy;
+        var xm=1, ym=(y0+y1+y2)/3;
+        var num=(0-xm)*(y0-ym)+(1-xm)*(y1-ym)+(2-xm)*(y2-ym);
+        var den=(0-xm)*(0-xm)+(1-xm)*(1-xm)+(2-xm)*(2-xm);
+        var slope=den?Math.round(num/den*10)/10:0;
+        var mixedDir=(y1-y0>0 && y2-y1<0)||(y1-y0<0 && y2-y1>0);
+        var tendTxt = mixedDir?'\u2194 variable':(slope<-1?'\u2198 baja':(slope>1?'\u2197 sube':'\u2192 estable'));
+        var tendColor = mixedDir?'#888':(slope<-1?'#C00000':(slope>1?'#375623':'#888'));
         return '<tr><td style="padding-left:24px;font-family:monospace;color:#888;">'+p.mat+'</td><td>'+p.desc+'</td>'
           +'<td style="text-align:right;">'+p.hoy.toLocaleString('es-CL')+'</td>'
           +'<td style="text-align:right;">'+p.hace_1sem.toLocaleString('es-CL')+'</td>'
-          +'<td style="text-align:right;padding-right:12px;">'+p.hace_2sem.toLocaleString('es-CL')+'</td></tr>';
+          +'<td style="text-align:right;">'+p.hace_2sem.toLocaleString('es-CL')+'</td>'
+          +'<td style="text-align:right;color:'+semColor+';font-weight:700;">'+(varKg>=0?'+':'')+varKg.toLocaleString('es-CL')+'</td>'
+          +'<td style="text-align:right;color:'+semColor+';font-weight:700;">'+(varPct===null?'\u2014':(varPct>=0?'+':'')+varPct+'%')+'</td>'
+          +'<td style="text-align:center;color:'+tendColor+';font-size:9px;">'+tendTxt+'</td>'
+          +'<td style="text-align:center;padding-right:12px;">'+semDot+'</td></tr>';
       }).join('')
-      +(prods.length?'':'<tr><td colspan="5" style="padding:8px 24px;color:#888;">Sin productos en esta categor\u00eda.</td></tr>')
+      +(prods.length?'':'<tr><td colspan="9" style="padding:8px 24px;color:#888;">Sin productos en esta categor\u00eda.</td></tr>')
       +'</table></td></tr>';
   });
   html+='</table>';
+  html+='<div style="background:#FFF8E7;border:.5px solid #C9A227;border-radius:6px;padding:8px 10px;margin-top:8px;font-size:10px;color:#5c4a0f;">'
+    +'\u{1F4CC} <strong>Pendiente de conversar:</strong> la "Tendencia" por producto es una primera versi\u00f3n (regresi\u00f3n simple sobre 3 puntos semanales). No considera que las ramplas no llegan todos los d\u00edas de la semana, as\u00ed que un producto puede verse "a la baja" solo porque la foto de esta semana coincidi\u00f3 con un d\u00eda distinto al de la semana pasada. Cuando tengamos m\u00e1s semanas de historial deber\u00edamos revisar juntos si conviene comparar por promedio m\u00f3vil, por d\u00eda espec\u00edfico de la semana, o algo m\u00e1s.'
+    +'</div>';
   html+='<div style="font-size:9px;color:#aaa;margin-top:6px;">'+(H.nota||'')+' An\u00e1lisis autom\u00e1tico por reglas (no es IA en vivo).</div>';
   box.innerHTML=html;
 }
