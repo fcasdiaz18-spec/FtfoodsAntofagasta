@@ -2554,9 +2554,11 @@ function renderHist(){
       +'<div class="card"><div class="lbl">Kilos</div><div class="val">'+Number(m.kpis.kg).toLocaleString('es-CL')+'</div></div>'
       +'</div>';
     h+='<div class="card" style="padding:0;overflow:hidden;margin-bottom:14px;"><table style="font-size:11px;width:100%;">'
-      +'<tr><th>Vendedor</th><th>Facturaci\u00f3n</th><th>Kilos</th><th>Margen</th><th>Margen %</th><th>Clientes</th></tr>';
+      +'<tr><th>Vendedor</th><th>Facturaci\u00f3n</th><th>Kilos</th><th>Margen</th><th>Margen %</th><th>Clientes</th><th>Recuperados</th></tr>';
     (m.vendedores||[]).forEach(function(v){
-      h+='<tr><td>'+v.nombre+'</td><td>$'+v.fact+'M</td><td>'+Number(v.kg).toLocaleString('es-CL')+'</td><td>$'+v.margen_clp+'M</td><td>'+v.margen_pct+'%</td><td>'+v.n_cli+'</td></tr>';
+      var recN=(m.recuperados&&m.recuperados[v.nombre])?m.recuperados[v.nombre].n:null;
+      h+='<tr><td>'+v.nombre+'</td><td>$'+v.fact+'M</td><td>'+Number(v.kg).toLocaleString('es-CL')+'</td><td>$'+v.margen_clp+'M</td><td>'+v.margen_pct+'%</td><td>'+v.n_cli+'</td>'
+        +'<td style="text-align:center;font-weight:700;color:'+(recN?'#375623':'#888')+';">'+(recN===null?'\u2014':recN)+'</td></tr>';
     });
     h+='</table></div>';
     if(m.recuperados){
