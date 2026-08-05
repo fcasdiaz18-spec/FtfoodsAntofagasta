@@ -862,7 +862,7 @@ function doLogin(){
 function doLogout(){
   if(fsAuth) fsAuth.signOut();
 }
-var ADMIN_EMAILS=['felipe.castillo@ftfoods.cl']; var HIST_EMAILS=['katherine.merino@ftfoods.cl'];
+var ADMIN_EMAILS=['felipe.castillo@ftfoods.cl']; var HIST_EMAILS=['katherine.merino@ftfoods.cl']; var RO_EMAILS=['felipe.castillo@ftfoods.cl','katherine.merino@ftfoods.cl']; var canRO=false; function roOk(){return RO_EMAILS.indexOf(currentUserEmail)!==-1;}
 var LOGISTICA_EMAILS=['marcela.cordero@ftfoods.cl','katherine.merino@ftfoods.cl','felipe.castillo@ftfoods.cl'];
 var isAdmin=false;
 var isLogistica=false;
@@ -876,6 +876,7 @@ if(fsAuth){
       currentUserEmail=(user.email||'').toLowerCase();
       isAdmin=ADMIN_EMAILS.indexOf(currentUserEmail)!==-1;
       isLogistica=LOGISTICA_EMAILS.indexOf(currentUserEmail)!==-1;
+       canRO=roOk(); if(typeof aplicarVisibilidadRO==='function') aplicarVisibilidadRO();
       if(isAdmin){ opsOk=true; secOk=true; }
       var tabSec=document.getElementById('tab-seguridad');
       if(tabSec) tabSec.style.display=isAdmin?'':'none';
