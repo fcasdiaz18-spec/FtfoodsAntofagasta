@@ -311,7 +311,7 @@ tr:hover td{background:#fafafa;}
   <table id="prod-cat-tabla" style="font-size:11px;display:none;"></table>
 </div>
 </div></div>
-<div class="page" id="page-stock"><div class="pi"><div class="sec">Stock disponible &#8212; 21-08-2026</div>
+<div class="page" id="page-stock"><div class="pi"><div class="sec" id="stock-title">Stock disponible &#8212; 21-08-2026</div>
 
 <div id="stock-trend-box" style="display:none;margin-bottom:18px;"></div>
 
@@ -800,10 +800,28 @@ function goOps(){
 function togTransito(){
   var box=document.getElementById('transito-box'), btn=document.getElementById('fs-tr');
   if(!box) return;
-  var abrir=(box.style.display==='none'||!box.style.display);
+  var abrir=(box.style.display!=='block');
   if(abrir && !box.getAttribute('data-render')){ renderTransito(); box.setAttribute('data-render','1'); }
-  box.style.display=abrir?'':'none';
+  box.style.display=abrir?'block':'none';
   if(btn) btn.className=abrir?'fbtn on':'fbtn';
+  // Al ver transito se oculta el stock disponible (son universos distintos)
+  ['ts','fb-stock-cat','stock-trend-box'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el) return;
+    if(abrir){ el.setAttribute('data-prev',el.style.display||''); el.style.display='none'; }
+    else { el.style.display=el.getAttribute('data-prev')||''; }
+  });
+  var sb=document.getElementById('sb-s'); if(sb) sb.style.display=abrir?'none':'';
+  ['u','r','y','g','a'].forEach(function(x){
+    var b=document.getElementById('fs-'+x);
+    if(!b) return;
+    b.style.opacity=abrir?'0.35':'';
+    b.style.pointerEvents=abrir?'none':'';
+    if(abrir) b.classList.remove('on');
+  });
+  if(!abrir) filtS(stockSemFilt||'');
+  var t=document.getElementById('stock-title');
+  if(t) t.innerHTML=abrir?'Mercaderia en transito &#8212; 21-08-2026':'Stock disponible &#8212; 21-08-2026';
 }
 function renderTransito(){
   var box=document.getElementById('transito-box'); if(!box) return;
