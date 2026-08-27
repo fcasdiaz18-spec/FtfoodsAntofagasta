@@ -848,7 +848,10 @@ function renderTransito(){
   box.innerHTML=h;
 }
 function aplicarVisibilidadRO(){
-  ['ro-card','ro-alert'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display=canRO?'':'none'; });
+  var elc=document.getElementById('ro-card'); if(elc) elc.style.display=canRO?'':'none';
+  var ela=document.getElementById('ro-alert');
+  if(ela){ var kk=D.kpis; var bajo=(kk.margen<kk.gastos_op);
+    ela.style.display=(canRO && kk.dias_trabajados>=10 && !bajo && kk.avance_ro<100)?'':'none'; }
   var bt=document.getElementById('fs-tr');
   if(bt){ bt.style.display=isAdmin?'':'none'; if(!isAdmin){ var bx=document.getElementById('transito-box'); if(bx) bx.style.display='none'; } }
   var ro=document.querySelectorAll('.ro-only');
@@ -1465,7 +1468,7 @@ function renderClientesHist(){
 
   var colsHeader=mesesHist.map(function(m){return '<th style="text-align:center">'+m+'</th>';}).join('');
   var h='<tr><th>Vendedor</th>'+colsHeader+'<th style="text-align:center">'+mesActualNombre+' (al d\u00eda '+k.dias_trabajados+')</th>'
-    +'<th>Vs mes anterior</th><th>Vs prom. 2 meses</th><th>Vs prom. 3 meses</th><th>Ritmo Julio vs esperado</th></tr>';
+    +'<th>Vs mes anterior</th><th>Vs promedio ultimos 3 meses</th><th>Ritmo '+mesActualNombre+' vs esperado</th></tr>';
   var esperadoPct=Math.round(k.dias_trabajados/k.dias_totales*100);
 
   function fmtVs(dif,pctLbl){
@@ -1481,24 +1484,23 @@ function renderClientesHist(){
     var ultimoMesCount=CLIENTES_HIST[ultimoMes][v.nombre]||0;
     var vsMesAnt=julio-ultimoMesCount;
 
-    var avg2=Math.round(mesesUlt2.reduce(function(s,m){return s+(CLIENTES_HIST[m][v.nombre]||0);},0)/mesesUlt2.length);
-    var vs2=julio-avg2;
-
     var vs3html='<span style="color:#888;">disponible con 3 meses cerrados</span>';
     if(hayUlt3){
       var avg3=Math.round(mesesUlt3.reduce(function(s,m){return s+(CLIENTES_HIST[m][v.nombre]||0);},0)/mesesUlt3.length);
       var vs3=julio-avg3;
-      vs3html=fmtVs(vs3)+' <span style="color:#888;font-size:10px;">(prom. '+avg3+')</span>';
+      var pct3=avg3?Math.round(julio/avg3*100):0;
+      vs3html=fmtVs(vs3)+' <span style="color:#888;font-size:10px;">(prom. '+avg3+' \u00b7 '+pct3+'%)</span>';
     }
 
-    var ritmoPct=ultimoMesCount?Math.round(julio/ultimoMesCount*100):0;
-    var ritmoTxt = ritmoPct>esperadoPct+10 ? '<span style="color:#375623;font-weight:700">&#9650; '+ritmoPct+'% de '+ultimoMes.toLowerCase()+' (adelantado)</span>'
-      : ritmoPct<esperadoPct-10 ? '<span style="color:#C00000;font-weight:700">&#9660; '+ritmoPct+'% de '+ultimoMes.toLowerCase()+' (atrasado)</span>'
-      : '<span style="color:#7D6608;">&#8594; '+ritmoPct+'% de '+ultimoMes.toLowerCase()+' (en l\u00ednea, esperado ~'+esperadoPct+'%)</span>';
+    var baseRitmo=hayUlt3?Math.round(mesesUlt3.reduce(function(s,m){return s+(CLIENTES_HIST[m][v.nombre]||0);},0)/mesesUlt3.length):ultimoMesCount;
+    var ritmoPct=baseRitmo?Math.round(julio/baseRitmo*100):0;
+    var ritmoTxt = ritmoPct>esperadoPct+10 ? '<span style="color:#375623;font-weight:700">&#9650; '+ritmoPct+'% del promedio (adelantado)</span>'
+      : ritmoPct<esperadoPct-10 ? '<span style="color:#C00000;font-weight:700">&#9660; '+ritmoPct+'% del promedio (atrasado)</span>'
+      : '<span style="color:#7D6608;">&#8594; '+ritmoPct+'% del promedio (en l\u00ednea, esperado ~'+esperadoPct+'%)</span>';
 
     h+='<tr><td><span class="dot" style="background:'+v.color+'"></span><strong>'+v.nombre+'</strong></td>'
       +mesesCols+'<td style="text-align:center;font-weight:700">'+julio+'</td>'
-      +'<td>'+fmtVs(vsMesAnt)+'</td><td>'+fmtVs(vs2)+'</td><td style="font-size:10px">'+vs3html+'</td>'
+      +'<td>'+fmtVs(vsMesAnt)+'</td><td style="font-size:10px">'+vs3html+'</td>'
       +'<td style="font-size:10px">'+ritmoTxt+'</td></tr>';
   });
 
@@ -1510,20 +1512,20 @@ function renderClientesHist(){
   });
   var totUltimoMes=totMesesCols[totMesesCols.length-1].total;
   var totVsMesAnt=totJulio-totUltimoMes;
-  var totAvg2=Math.round(totMesesCols.slice(-2).reduce(function(s,x){return s+x.total;},0)/Math.min(2,totMesesCols.length));
-  var totVs2=totJulio-totAvg2;
   var totVs3html='<span style="color:#aaa;">disponible con 3 meses cerrados</span>';
+  var totAvg3=0;
   if(hayUlt3){
-    var totAvg3=Math.round(totMesesCols.slice(-3).reduce(function(s,x){return s+x.total;},0)/3);
-    totVs3html=fmtVs(totJulio-totAvg3);
+    totAvg3=Math.round(totMesesCols.slice(-3).reduce(function(s,x){return s+x.total;},0)/3);
+    totVs3html=fmtVs(totJulio-totAvg3)+' <span style="color:#bbb;font-size:10px;">(prom. '+totAvg3+')</span>';
   }
-  var totRitmoPct=totUltimoMes?Math.round(totJulio/totUltimoMes*100):0;
+  var totBase=hayUlt3?totAvg3:totUltimoMes;
+  var totRitmoPct=totBase?Math.round(totJulio/totBase*100):0;
   h+='<tr style="background:#1F1F1F;color:#fff;font-weight:700;">'
     +'<td>TOTAL SUCURSAL</td>'
     +totMesesCols.map(function(x){return '<td style="text-align:center">'+x.total+'</td>';}).join('')
     +'<td style="text-align:center">'+totJulio+'</td>'
-    +'<td>'+fmtVs(totVsMesAnt)+'</td><td>'+fmtVs(totVs2)+'</td><td style="font-size:10px">'+totVs3html+'</td>'
-    +'<td style="font-size:10px">'+totRitmoPct+'% de '+ultimoMes.toLowerCase()+'</td></tr>';
+    +'<td>'+fmtVs(totVsMesAnt)+'</td><td style="font-size:10px">'+totVs3html+'</td>'
+    +'<td style="font-size:10px">'+totRitmoPct+'% del promedio (esperado ~'+esperadoPct+'%)</td></tr>';
   tbl.innerHTML=h;
 
   var box=document.getElementById('vend-insights-box');
@@ -2125,7 +2127,7 @@ document.addEventListener('DOMContentLoaded',function(){
     ?('Margen acumulado $'+k.margen+'M de $'+k.gastos_op+'M de gastos. Faltan $'+(k.gastos_op-k.margen).toFixed(1)+'M para el punto de equilibrio ('+(k.equilibrio_pct||0)+'% cubierto). Proyeccion de cierre: $'+k.proy_ro+'M.')
     :('Resultado Op. $'+k.ro+'M vs meta $'+k.meta_ro+'M. '+(k.avance_ro>=100?'Meta superada.':'Faltan $'+(k.meta_ro-k.ro).toFixed(1)+'M.'));
   var roAlert=document.getElementById('ro-alert');
-  if(roAlert) roAlert.style.display=(canRO && k.dias_trabajados>=10 && bajoEq===false)?'':'none';
+  if(roAlert) roAlert.style.display=(canRO && k.dias_trabajados>=10 && bajoEq===false && k.avance_ro<100)?'':'none';
   aplicarVisibilidadRO();
   var rf=document.getElementById('resumen-fecha');
   if(rf && k.fecha) rf.textContent='Resumen ejecutivo \u2014 al '+k.fecha;
@@ -2176,11 +2178,11 @@ document.addEventListener('DOMContentLoaded',function(){
     {l:'Meta Margen Bruto',v:'$'+k.meta_mg+'M',av:'$'+k.margen+'M ('+k.margen_pct+'%)',p:k.avance_m,f:k.avance_m>=100?'\u2713 Superada +$'+Math.abs(k.faltan_m)+'M':'Faltan $'+k.faltan_m+'M',proy:'$'+k.proy_m+'M'},
     {l:'Meta Resultado Op.',v:'$'+k.meta_ro+'M',av:'$'+k.ro+'M est.',p:k.avance_ro,f:(k.margen<k.gastos_op)?('Bajo punto de equilibrio \u00b7 faltan $'+(k.gastos_op-k.margen).toFixed(1)+'M de margen'):(k.avance_ro>=100?'\u2713 Superada +$'+(k.ro-k.meta_ro).toFixed(1)+'M':'Gap $'+(k.meta_ro-k.ro).toFixed(1)+'M'),proy:'$'+k.proy_ro+'M',ro:1},
     {l:'Meta Margen %',v:k.meta_mg_pct+'%',av:k.margen_pct+'%',p:k.avance_mgpct,f:k.avance_mgpct>=100?'\u2713 Superada':'Faltan '+(k.meta_mg_pct-k.margen_pct).toFixed(1)+' pts',proy:k.proy_mgpct+'%'},
-  ].filter(function(x){return !x.ro||canRO;}).map(function(x){
+  ].map(function(x){
     var c=bc(x.p);
     var icons={'Meta Facturacion':'\u{1F4B5}','Meta Margen Bruto':'\u{1F4B0}','Meta Resultado Op.':'\u2696\uFE0F','Meta Margen %':'\u{1F4C8}'};
     var ic=icons[x.l]||'\u{1F3AF}';
-    return '<div class="card" style="border-top:3px solid '+c+';">'
+    return '<div class="card'+(x.ro?' ro-only':'')+'" style="border-top:3px solid '+c+';">'
       +'<div class="lbl" style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.4px;color:#444;text-transform:uppercase;margin-bottom:6px;"><span style="font-size:15px;">'+ic+'</span>'+x.l+'</div>'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px">'
       +'<div class="val" style="font-size:22px;font-weight:800;color:#9C1C1C">'+x.v+'</div>'
@@ -2192,6 +2194,7 @@ document.addEventListener('DOMContentLoaded',function(){
       +'<div class="pr"><span style="font-weight:700;color:'+c+'">'+x.p+'%</span><span>'+x.f+'</span></div>'
       +'</div>';
   }).join('');
+  if(typeof aplicarVisibilidadRO==='function') aplicarVisibilidadRO();
 
   // PL tabla
   document.getElementById('pl').innerHTML=
