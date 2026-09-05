@@ -268,7 +268,7 @@ tr:hover td{background:#fafafa;}
 </div>
 </div></div><div class="g2"><div><div class="sec">Focos del mes</div>
 <div id="foco-inicio-box" style="background:linear-gradient(135deg,#9C1C1C 0%,#6B0F0F 100%);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px;">
-</div><div class="al ar" id="ro-alert"><div style="font-size:18px;flex-shrink:0;">&#128680;</div><div><div class="at">Resultado operacional cr&#237;tico</div><div class="ad" id="ro-txt"></div></div></div><div class="al" style="background:#F3F0FA;border-left:4px solid #7030A0;cursor:pointer;" onclick="go('stock',document.querySelectorAll('.tab')[4])"><div style="font-size:18px;flex-shrink:0;">&#128230;</div><div style="flex:1"><div class="at" style="color:#4A2E6B;">Gesti&#243;n de Inventario &#8594;</div><div class="ad">Sin venta, estad&#237;a cr&#237;tica y productos urgentes de liquidar. Ver detalle completo.</div></div></div><div class="al aa"><div style="font-size:18px;flex-shrink:0;">&#128230;</div><div><div class="at" id="t3-txt"></div><div class="ad">Vacuno Importado concentra el mayor riesgo.</div></div></div><div class="al ag"><div style="font-size:18px;flex-shrink:0;">&#9989;</div><div><div class="at" id="mg-txt"></div><div class="ad">Carolina Aracena y Anibal Marin lideran el margen.</div></div></div></div><div><div class="sec">Facturacion por vendedor</div><div class="card"><canvas id="c1" height="200"></canvas></div></div></div></div>
+</div><div class="al ar" id="ro-alert"><div style="font-size:18px;flex-shrink:0;">&#128680;</div><div><div class="at">Resultado operacional cr&#237;tico</div><div class="ad" id="ro-txt"></div></div></div><div class="al" style="background:#F3F0FA;border-left:4px solid #7030A0;cursor:pointer;" onclick="go('stock',document.querySelectorAll('.tab')[5])"><div style="font-size:18px;flex-shrink:0;">&#128230;</div><div style="flex:1"><div class="at" style="color:#4A2E6B;">Gesti&#243;n de Inventario &#8594;</div><div class="ad">Sin venta, estad&#237;a cr&#237;tica y productos urgentes de liquidar. Ver detalle completo.</div></div></div><div class="al aa"><div style="font-size:18px;flex-shrink:0;">&#128230;</div><div><div class="at" id="t3-txt"></div><div class="ad">Vacuno Importado concentra el mayor riesgo.</div></div></div><div class="al ag"><div style="font-size:18px;flex-shrink:0;">&#9989;</div><div><div class="at" id="mg-txt"></div><div class="ad">Carolina Aracena y Anibal Marin lideran el margen.</div></div></div></div><div><div class="sec">Facturacion por vendedor</div><div class="card"><canvas id="c1" height="200"></canvas></div></div></div></div>
 <!-- TOP 10 CLIENTES Y PRODUCTOS -->
 <div class="g2" style="margin-top:14px;">
   <div>
@@ -787,14 +787,14 @@ function go(n,el){
   if(n==='gastos' && typeof renderGastos==='function') renderGastos();
 }
 function goAdmin(){
-  if(opsOk){go('admin',document.querySelectorAll('.tab')[8]);renderAdmin();return;}
+  if(opsOk){go('admin',document.querySelectorAll('.tab')[9]);renderAdmin();return;}
   // Use same lock overlay, but redirect to admin after unlock
   pendingPage='admin';
   document.getElementById('ol').classList.add('on');
   setTimeout(function(){document.getElementById('opsp').focus();},100);
 }
 function goOps(){
-  if(opsOk){go('ops',document.querySelectorAll('.tab')[9]);setTimeout(function(){buildOpsCharts();},50);return;}
+  if(opsOk){go('ops',document.querySelectorAll('.tab')[10]);setTimeout(function(){buildOpsCharts();},50);return;}
   pendingPage='ops';
   document.getElementById('ol').classList.add('on');
   setTimeout(function(){document.getElementById('opsp').focus();},100);
@@ -879,20 +879,20 @@ function aplicarVisibilidadRO(){
   for(var i=0;i<ro.length;i++){ ro[i].style.display=canRO?'':'none'; }
 }
 function goHist(){
-  {go('historico',document.querySelectorAll('.tab')[12]);renderHist();return;}
+  {go('historico',document.querySelectorAll('.tab')[13]);renderHist();return;}
   pendingPage='historico';
   document.getElementById('ol').classList.add('on');
   setTimeout(function(){document.getElementById('opsp').focus();},100);
 }
 function goLog(){
-  if(opsOk){go('logistica',document.querySelectorAll('.tab')[10]);renderLogistica();return;}
+  if(opsOk){go('logistica',document.querySelectorAll('.tab')[11]);renderLogistica();return;}
   pendingPage='logistica';
   document.getElementById('ol').classList.add('on');
   setTimeout(function(){document.getElementById('opsp').focus();},100);
 }
 function goGastos(){
   if(!isAdmin) return;
-  go('gastos',document.querySelectorAll('.tab')[11]);
+  go('gastos',document.querySelectorAll('.tab')[12]);
   renderGastos();
 }
 var secOk=false;
@@ -974,7 +974,7 @@ if(fsAuth){
 }
 
 function goSec(){
-  if(secOk){go('seguridad',document.querySelectorAll('.tab')[13]);renderAccesos();return;}
+  if(secOk){go('seguridad',document.querySelectorAll('.tab')[14]);renderAccesos();return;}
   document.getElementById('ol2').classList.add('on');
   setTimeout(function(){document.getElementById('secp').focus();},100);
 }
@@ -984,7 +984,7 @@ function chkSec(){
     document.getElementById('ol2').classList.remove('on');
     document.getElementById('secp').value='';
     document.getElementById('sece').style.display='none';
-    go('seguridad',document.querySelectorAll('.tab')[13]);
+    go('seguridad',document.querySelectorAll('.tab')[14]);
     renderAccesos();
   }else{
     document.getElementById('sece').style.display='block';
@@ -995,10 +995,10 @@ function chkOps(){
     opsOk=true;
     document.getElementById('ol').classList.remove('on');
     document.getElementById('opsp').value='';
-    if(pendingPage==='admin'){go('admin',document.querySelectorAll('.tab')[8]);renderAdmin();}
-    else if(pendingPage==='historico'){go('historico',document.querySelectorAll('.tab')[12]);renderHist();}
-    else if(pendingPage==='logistica'){go('logistica',document.querySelectorAll('.tab')[10]);renderLogistica();}
-    else{go('ops',document.querySelectorAll('.tab')[9]);setTimeout(function(){buildOpsCharts();},50);}
+    if(pendingPage==='admin'){go('admin',document.querySelectorAll('.tab')[9]);renderAdmin();}
+    else if(pendingPage==='historico'){go('historico',document.querySelectorAll('.tab')[13]);renderHist();}
+    else if(pendingPage==='logistica'){go('logistica',document.querySelectorAll('.tab')[11]);renderLogistica();}
+    else{go('ops',document.querySelectorAll('.tab')[10]);setTimeout(function(){buildOpsCharts();},50);}
     pendingPage='';
   } else {
     var e=document.getElementById('ope');
@@ -2151,6 +2151,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
   // Textos dinamicos inicio
   actualizarTitulosMes();
+  if(typeof renderInventarioGestion==='function'){ try{ renderInventarioGestion(); }catch(e){} }
   var bajoEq=(k.margen<k.gastos_op);
   document.getElementById('ro-txt').textContent=bajoEq
     ?('Margen acumulado $'+k.margen+'M de $'+k.gastos_op+'M de gastos. Faltan $'+(k.gastos_op-k.margen).toFixed(1)+'M para el punto de equilibrio ('+(k.equilibrio_pct||0)+'% cubierto). Proyeccion de cierre: $'+k.proy_ro+'M.')
