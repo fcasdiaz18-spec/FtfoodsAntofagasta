@@ -356,7 +356,7 @@ tr:hover td{background:#fafafa;}
 </div>
 
 </div></div>
-<div class="page" id="page-metas"><div class="pi"><div class="sec" id="tit-metas">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl">Dias restantes (J16 feriado)</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
+<div class="page" id="page-metas"><div class="pi"><div class="sec" id="tit-metas">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl" id="lbl-dias-rest">Dias restantes</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
 <div class="page" id="page-vendedores"><div class="pi"><div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">Desempeno individual &#8212; Clic en fila para ver detalle <span id="vend-total-clientes-badge" style="font-size:11px;font-weight:700;background:#EFF4FF;color:#1F4E79;padding:4px 10px;border-radius:12px;"></span></div><div class="vend-grid"><div style="max-height:420px;overflow-y:auto;border-radius:8px;"><table id="tv"></table></div><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div>
 
 <div id="vcs"></div></div></div>
@@ -959,6 +959,16 @@ function renderCumples(){
   }).join('');
 }
 
+var FERIADOS_MES=[{d:18,m:9,t:'V18'},{d:19,m:9,t:'S19'},{d:20,m:9,t:'D20'}];
+function actualizarFeriadoLbl(){
+  var el=document.getElementById('lbl-dias-rest'); if(!el) return;
+  var p=((D.kpis&&D.kpis.fecha)||'').split('-'); if(p.length<3) return;
+  var dHoy=parseInt(p[0],10), mHoy=parseInt(p[1],10);
+  var pend=FERIADOS_MES.filter(function(f){ return f.m===mHoy && f.d>=dHoy; });
+  el.innerHTML = pend.length
+    ? 'Dias restantes ('+pend.map(function(f){return f.t;}).join(', ')+' feriado)'
+    : 'Dias restantes';
+}
 function actualizarTitulosMes(){
   var k=(typeof D!=='undefined'&&D.kpis)?D.kpis:{}; 
   var M=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -2277,6 +2287,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
   // Textos dinamicos inicio
   actualizarTitulosMes();
+  if(typeof actualizarFeriadoLbl==='function'){ try{ actualizarFeriadoLbl(); }catch(e){} }
   if(typeof renderCumples==='function'){ try{ renderCumples(); }catch(e){} }
   if(typeof renderInventarioGestion==='function'){ try{ renderInventarioGestion(); }catch(e){} }
   var bajoEq=(k.margen<k.gastos_op);
