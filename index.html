@@ -285,42 +285,70 @@ tr:hover td{background:#fafafa;}
   </div>
 </div>
 
-<!-- CUMPLEANOS -->
-<div class="sec" style="margin-top:16px;">&#127874; Cumplea&#241;os del equipo</div>
-<div class="card" style="padding:12px 14px;">
-  <div id="cumple-hoy"></div>
-  <div id="cumple-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:5px;"></div>
+<!-- CUMPLEANOS + CALENDARIO -->
+<style>
+  .ini-duo{display:grid;grid-template-columns:296px 1fr;gap:14px;margin-top:16px;align-items:start}
+  @media (max-width:980px){.ini-duo{grid-template-columns:1fr}}
+  /* --- cumpleanos --- */
+  .cmp-card{background:#fff;border:1px solid #E3DDD6;border-radius:10px;padding:0;overflow:hidden}
+  .cmp-top{background:linear-gradient(135deg,#8C1717,#C0392B);color:#fff;padding:11px 13px}
+  .cmp-top .t{font-size:12px;font-weight:800;letter-spacing:.3px;display:flex;align-items:center;gap:7px}
+  .cmp-prox{display:flex;align-items:center;gap:10px;margin-top:9px;background:rgba(255,255,255,.14);border-radius:8px;padding:8px 10px}
+  .cmp-av{width:38px;height:38px;border-radius:50%;background:#fff;color:#8C1717;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+  .cmp-prox .n{font-size:13px;font-weight:800;line-height:1.15}
+  .cmp-prox .f{font-size:10px;opacity:.88;margin-top:2px}
+  .cmp-body{padding:7px;max-height:306px;overflow-y:auto}
+  .cmp-row{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;font-size:11px}
+  .cmp-row+.cmp-row{margin-top:2px}
+  .cmp-row:hover{background:#FAF8F5}
+  .cmp-chip{min-width:34px;height:26px;border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;line-height:1}
+  .cmp-chip .d{font-size:11px}
+  .cmp-chip .m{font-size:7px;letter-spacing:.4px;opacity:.85;text-transform:uppercase}
+  .cmp-row.hoy{background:#FDF0F0;outline:1.5px solid #B33A3A}
+  .cmp-row.hoy .nm{font-weight:800;color:#8C1717}
+  .cmp-nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333}
+  .cmp-dd{font-size:9px;color:#aaa;flex-shrink:0}
+</style>
+<div class="ini-duo">
+<div>
+  <div class="cmp-card">
+    <div class="cmp-top">
+      <div class="t"><span style="font-size:15px;">&#127874;</span> Cumplea&#241;os del equipo</div>
+      <div id="cumple-hoy"></div>
+    </div>
+    <div class="cmp-body"><div id="cumple-lista"></div></div>
+  </div>
 </div>
-
-<!-- CALENDARIO DE DESPACHOS -->
-<div class="sec" style="margin-top:16px;">&#128197; Calendario de despachos &#8212; Octubre 2026</div>
-<div class="card" style="padding:14px;">
+<div>
+  <div class="sec" style="margin:0 0 7px;">&#128197; Calendario de despachos &#8212; Octubre 2026</div>
+  <div class="card" style="padding:11px;">
   <style>
-    .cal-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px}
-    .cal-dias span{font-size:10px;font-weight:700;color:#8A8079;text-align:center;letter-spacing:.5px}
-    .cal-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px}
-    .cal-d.inv{background:#E8EFF7;border-color:#1F4E79;border-width:2px}
-    .cal-d.inv .n{color:#1F4E79}
-    .cal-et.inv{color:#1F4E79;font-weight:800}
-    .cal-banda.inv{background:#1F4E79;color:#fff;justify-content:center}
-    .cal-d{background:#fff;border:1px solid #E3DDD6;border-radius:6px;min-height:78px;padding:6px 7px;display:flex;flex-direction:column}
-    .cal-d .n{font-size:14px;font-weight:700;line-height:1;margin-bottom:5px;color:#241F1F}
+    .cal-dias{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+    .cal-dias span{font-size:8px;font-weight:700;color:#8A8079;text-align:center;letter-spacing:.3px}
+    .cal-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+    .cal-d{background:#fff;border:1px solid #E3DDD6;border-radius:5px;min-height:52px;padding:4px 5px;display:flex;flex-direction:column}
+    .cal-d .n{font-size:11px;font-weight:700;line-height:1;margin-bottom:3px;color:#241F1F}
     .cal-d.fin .n{color:#B33A3A}
     .cal-d.fer{background:#FDF0F0;border-color:#B33A3A}
     .cal-d.fer .n{color:#8C1717}
     .cal-d.otro{background:#F3F0EC;border-style:dashed}
     .cal-d.otro .n{color:#2F6B3C}
-    .cal-dest{display:block;font-size:10px;font-weight:600;color:#fff;background:#8C1717;border-radius:3px;padding:2px 5px;margin-bottom:3px;line-height:1.3}
+    .cal-d.inv{background:#E8EFF7;border-color:#1F4E79;border-width:1.5px}
+    .cal-d.inv .n{color:#1F4E79}
+    .cal-et.inv{color:#1F4E79;font-weight:800}
+    .cal-dest{display:block;font-size:8px;font-weight:600;color:#fff;background:#8C1717;border-radius:3px;padding:1px 4px;margin-bottom:2px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .cal-dest.b{background:#B33A3A}
-    .cal-et{font-size:9px;font-weight:700;color:#8C1717;margin-top:auto}
-    .cal-banda{border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700;margin-bottom:5px;background:#F5D547;color:#5C4A00}
+    .cal-et{font-size:7.5px;font-weight:700;color:#8C1717;margin-top:auto;line-height:1.2}
+    .cal-banda{border-radius:5px;padding:5px 10px;font-size:10px;font-weight:700;margin-bottom:4px;background:#F5D547;color:#5C4A00}
     .cal-banda.centro{text-align:center}
+    .cal-banda.inv{background:#1F4E79;color:#fff;text-align:center}
+    @media (max-width:980px){.cal-d{min-height:46px}}
     @media (max-width:700px){.cal-sem{grid-template-columns:repeat(2,1fr)}.cal-dias{display:none}.cal-d{min-height:auto}}
   </style>
 
-  <div style="background:#1F4E79;color:#fff;border-radius:7px;padding:10px 14px;margin-bottom:10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:9px;">
-    <span style="font-size:17px;">&#128203;</span>
-    <span>INVENTARIO GENERAL &#183; Viernes 16 y S&#225;bado 17 de octubre</span>
+  <div style="background:#1F4E79;color:#fff;border-radius:6px;padding:6px 11px;margin-bottom:8px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:7px;">
+    <span style="font-size:13px;">&#128203;</span>
+    <span>INVENTARIO GENERAL &#183; viernes 16 y s&#225;bado 17 &#8212; bodega cerrada</span>
   </div>
 
   <div class="cal-dias"><span>Lunes</span><span>Martes</span><span>Mi&#233;rcoles</span><span>Jueves</span><span>Viernes</span><span>S&#225;bado</span><span>Domingo</span></div>
@@ -354,7 +382,6 @@ tr:hover td{background:#fafafa;}
     <div class="cal-d inv fin"><div class="n">17</div><div class="cal-et inv">Inventario general</div></div>
     <div class="cal-d fin"><div class="n">18</div></div>
   </div>
-  <div class="cal-banda inv">&#128203; INVENTARIO GENERAL &#183; viernes 16 y s&#225;bado 17 &#8212; bodega cerrada a despacho y recepci&#243;n</div>
 
   <div class="cal-sem">
     <div class="cal-d"><div class="n">19</div><span class="cal-dest">Calama</span><span class="cal-dest b">Tocopilla</span></div>
@@ -375,6 +402,8 @@ tr:hover td{background:#fafafa;}
     <div class="cal-d fin"><div class="n">31</div></div>
     <div class="cal-d otro fin"><div class="n">1</div></div>
   </div>
+  </div>
+</div>
 </div>
 
 </div></div>
@@ -949,26 +978,41 @@ var CUMPLES=[
 ];
 var MESES_C=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 function renderCumples(){
-  var box=document.getElementById('cumple-lista'), hoyBox=document.getElementById('cumple-hoy');
+  var box=document.getElementById('cumple-lista'), topBox=document.getElementById('cumple-hoy');
   if(!box) return;
+  var MCOL=['#8C1717','#B33A3A','#C0392B','#1F4E79','#2F6B3C','#C9A227','#7B1FA2','#E07B00','#375623','#1F6FB2','#A0522D','#5C4A00'];
   var f=new Date(), hd=f.getDate(), hm=f.getMonth()+1;
-  var hoy=CUMPLES.filter(function(c){return c.d===hd&&c.m===hm;});
-  if(hoyBox){
-    hoyBox.innerHTML = hoy.length
-      ? '<div style="background:linear-gradient(90deg,#8C1717,#B33A3A);color:#fff;border-radius:7px;padding:11px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-        +'<span style="font-size:22px;">&#127881;</span><div><div style="font-size:13px;font-weight:800;">\u00a1Hoy est\u00e1 de cumplea\u00f1os '
-        +hoy.map(function(c){return c.n;}).join(' y ')+'!</div>'
-        +'<div style="font-size:11px;opacity:.9;">'+hd+' de '+MESES_C[hm]+' \u00b7 De parte de todo el equipo FT Foods Antofagasta</div></div></div>'
-      : '';
+  // dias que faltan para cada cumpleanos
+  function faltan(c){
+    var d=(c.m-hm)*31+(c.d-hd);
+    if(c.m<hm||(c.m===hm&&c.d<hd)) d+=372;
+    return d;
   }
-  var orden=CUMPLES.slice().sort(function(a,b){ return (a.m-b.m)||(a.d-b.d); });
+  var orden=CUMPLES.slice().sort(function(a,b){ return faltan(a)-faltan(b); });
+  var hoy=CUMPLES.filter(function(c){return c.d===hd&&c.m===hm;});
+  var prox=orden[0];
+  if(topBox){
+    var ini=function(n){ return n.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join(''); };
+    if(hoy.length){
+      topBox.innerHTML='<div class="cmp-prox"><div class="cmp-av">\u{1F389}</div><div>'
+        +'<div class="n">\u00a1Hoy cumple '+hoy.map(function(c){return c.n;}).join(' y ')+'!</div>'
+        +'<div class="f">'+hd+' de '+MESES_C[hm]+' \u00b7 \u00a1Saludos de todo el equipo!</div></div></div>';
+    } else if(prox){
+      var dd=faltan(prox);
+      topBox.innerHTML='<div class="cmp-prox"><div class="cmp-av">'+ini(prox.n)+'</div><div>'
+        +'<div class="n">'+prox.n+'</div>'
+        +'<div class="f">Pr\u00f3ximo \u00b7 '+prox.d+' de '+MESES_C[prox.m]+(dd<=31?' \u00b7 en '+dd+(dd===1?' d\u00eda':' d\u00edas'):'')+'</div></div></div>';
+    } else { topBox.innerHTML=''; }
+  }
   box.innerHTML=orden.map(function(c){
     var esHoy=(c.d===hd&&c.m===hm);
-    var prox=(c.m===hm&&c.d>hd)||(c.m===hm%12+1&&hd>25);
-    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;font-size:11px;'
-      +(esHoy?'background:#FDF0F0;border:1px solid #B33A3A;font-weight:700;':(prox?'background:#FFFBE6;':'background:#fafafa;'))+'">'
-      +'<span style="min-width:56px;color:'+(esHoy?'#8C1717':'#8A8079')+';font-weight:700;">'+c.d+' '+MESES_C[c.m].slice(0,3)+'</span>'
-      +'<span>'+c.n+(esHoy?' &#127874;':'')+'</span></div>';
+    var col=MCOL[(c.m-1)%12];
+    var dd=faltan(c);
+    return '<div class="cmp-row'+(esHoy?' hoy':'')+'">'
+      +'<div class="cmp-chip" style="background:'+col+'1A;color:'+col+'">'
+      +'<span class="d">'+c.d+'</span><span class="m">'+MESES_C[c.m].slice(0,3)+'</span></div>'
+      +'<span class="cmp-nm nm">'+c.n+(esHoy?' \u{1F382}':'')+'</span>'
+      +'<span class="cmp-dd">'+(esHoy?'\u00a1hoy!':(dd<=45?dd+'d':''))+'</span></div>';
   }).join('');
 }
 
@@ -1877,7 +1921,7 @@ function renderClientesHist(){
 
   var colsHeader=mesesHist.map(function(m){return '<th style="text-align:center">'+m+'</th>';}).join('');
   var h='<tr><th>Vendedor</th>'+colsHeader+'<th style="text-align:center">'+mesActualNombre+' (al '+(k.fecha||'')+' \u00b7 d\u00eda '+k.dias_trabajados+'/'+k.dias_totales+')</th>'
-    +'<th>Vs mes anterior</th><th>Vs promedio ultimos 3 meses</th><th>Ritmo '+mesActualNombre+' vs esperado</th></tr>';
+    +'<th>Vs mes anterior</th><th>Ritmo '+mesActualNombre+' vs esperado</th></tr>';
   var esperadoPct=Math.round(k.dias_trabajados/k.dias_totales*100);
 
   function fmtVs(dif,pctLbl){
@@ -1909,7 +1953,7 @@ function renderClientesHist(){
 
     h+='<tr><td><span class="dot" style="background:'+v.color+'"></span><strong>'+v.nombre+'</strong></td>'
       +mesesCols+'<td style="text-align:center;font-weight:700">'+julio+'</td>'
-      +'<td>'+fmtVs(vsMesAnt)+'</td><td style="font-size:10px">'+vs3html+'</td>'
+      +'<td>'+fmtVs(vsMesAnt)+'</td>'
       +'<td style="font-size:10px">'+ritmoTxt+'</td></tr>';
   });
 
@@ -1933,7 +1977,7 @@ function renderClientesHist(){
     +'<td>TOTAL SUCURSAL</td>'
     +totMesesCols.map(function(x){return '<td style="text-align:center">'+x.total+'</td>';}).join('')
     +'<td style="text-align:center">'+totJulio+'</td>'
-    +'<td>'+fmtVs(totVsMesAnt)+'</td><td style="font-size:10px">'+totVs3html+'</td>'
+    +'<td>'+fmtVs(totVsMesAnt)+'</td>'
     +'<td style="font-size:10px">'+totRitmoPct+'% del promedio (esperado ~'+esperadoPct+'%)</td></tr>';
   tbl.innerHTML=h;
 
