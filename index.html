@@ -60,6 +60,19 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;color:#1a
 .bar{background:#f0f0f0;border-radius:4px;height:7px;overflow:hidden;margin:5px 0 3px;}
 .bf{height:100%;border-radius:4px;}
 .pr{display:flex;justify-content:space-between;font-size:10px;color:#888;}
+.acc{background:#fff;border:.5px solid #e0e0e0;border-radius:10px;margin-bottom:8px;overflow:hidden;}
+.acc-h{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none;}
+.acc-h:hover{background:#FAFAFA;}
+.acc-t{font-size:12px;font-weight:800;color:#333;white-space:nowrap;}
+.acc-s{font-size:10.5px;color:#777;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acc-a{color:#999;font-size:11px;transition:transform .2s;flex-shrink:0;}
+.acc.open .acc-a{transform:rotate(180deg);}
+.acc-b{display:none;padding:4px 14px 14px;border-top:.5px solid #eee;}
+.acc.open .acc-b{display:block;}
+.stk-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.stk-chip{background:#fff;border:.5px solid #e0e0e0;border-radius:8px;padding:6px 10px;font-size:10px;color:#777;min-width:92px;}
+.stk-chip b{display:block;font-size:15px;color:#222;}
+@media(max-width:600px){.acc-s{white-space:normal;}.acc-h{flex-wrap:wrap;}}
 .sec{font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.6px;margin:14px 0 8px;}
 table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:.5px solid #e0e0e0;}
 th{background:#1F1F1F;color:#fff;padding:8px 10px;text-align:left;font-size:11px;font-weight:600;}
@@ -512,27 +525,15 @@ tr:hover td{background:#fafafa;}
 </div></div>
 <div class="page" id="page-stock"><div class="pi"><div class="sec" id="stock-title">Stock disponible &#8212; 28-07-2026</div>
 
-<div id="sply-box" style="display:none;margin-bottom:18px;"></div>
-<div id="inv-box" style="margin-bottom:18px;">
-  <div class="sec" style="margin-top:4px;">&#128230; Gesti&#243;n de inventario</div>
-  <div class="card" style="padding:14px;margin-bottom:12px;">
-    <div style="font-size:12px;font-weight:700;color:#C00000;margin-bottom:2px;" id="urg-count-txt">Productos gestionables urgentes</div>
-    <div style="font-size:10px;color:#888;margin-bottom:8px;" id="urg-sub-txt"></div>
+<div class="stk-chips" id="stk-chips"></div>
+<div class="acc" id="acc-sply" style="display:none;"><div class="acc-h" onclick="togAcc('acc-sply')"><span class="acc-t">&#128230; Control de reposici&#243;n</span><span class="acc-s" id="acc-sply-s"></span><span class="acc-a">&#9660;</span></div><div class="acc-b"><div id="sply-box" style="display:none;"></div></div></div>
+<div class="acc" id="inv-box"><div class="acc-h" onclick="togAcc('inv-box')"><span class="acc-t" style="color:#9C1B6B;">&#9888; Gestionables urgentes</span><span class="acc-s" id="urg-count-txt"></span><span class="acc-a">&#9660;</span></div><div class="acc-b">
+    <div style="font-size:10px;color:#888;margin:6px 0 8px;" id="urg-sub-txt"></div>
     <div id="urg-d"></div>
-  </div>
-  <div class="card" style="padding:14px;margin-bottom:12px;">
-    <div style="font-size:12px;font-weight:700;color:#7D6608;margin-bottom:8px;" id="inm-count-txt">Sin venta (inmovilizados)</div>
-    <div id="inm-d"></div>
-  </div>
-  <div class="card" style="padding:14px;">
-    <div style="font-size:12px;font-weight:700;color:#1F4E79;margin-bottom:8px;" id="ext-count-txt">Estad&#237;a extendida</div>
-    <div id="ext-d"></div>
-  </div>
-</div>
-<div id="costo-resumen" class="costo-col" style="display:none;margin-bottom:12px;"></div>
-
-<div id="stock-trend-box" style="display:none;margin-bottom:18px;"></div>
-
+</div></div>
+<div class="acc" id="acc-trend" style="display:none;"><div class="acc-h" onclick="togAcc('acc-trend')"><span class="acc-t" style="color:#7030A0;">&#128200; Insights y comparativo semanal</span><span class="acc-s" id="acc-trend-s"></span><span class="acc-a">&#9660;</span></div><div class="acc-b"><div id="stock-trend-box" style="display:none;"></div></div></div>
+<div id="costo-resumen" class="costo-col" style="display:none;margin:8px 0 12px;"></div>
+<div class="sec" style="margin-top:14px;">&#128203; Stock disponible <span style="font-weight:400;color:#888;text-transform:none;letter-spacing:0;">&#8212; clic en un producto para ver sus lotes</span></div>
 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;"><input class="sb" id="sb-s" placeholder="Buscar..." style="flex:1;min-width:180px;margin:0"><button class="fbtn" id="fs-u" onclick="filtS('u')" style="color:#C00000;font-weight:700;">&#9888; Urgente</button><button class="fbtn" id="fs-r" onclick="filtS('r')">Critico</button><button class="fbtn" id="fs-y" onclick="filtS('y')">Alerta</button><button class="fbtn" id="fs-g" onclick="filtS('g')">OK</button><button class="fbtn on" id="fs-a" onclick="filtS('')">Todo</button><button class="fbtn" id="fs-tr" onclick="togTransito()" style="display:none;color:#1F4E79;font-weight:700;border-color:#1F4E79;">&#128667; Transito</button></div><div id="transito-box" style="display:none;margin-bottom:14px;"></div><div class="fbtns" id="fb-stock-cat" style="margin-bottom:10px;"></div><table id="ts"></table></div></div>
 <div class="page" id="page-precios"><div class="pi"><div class="sec">&#128181; Listas de precios</div><div class="pvig"><span>&#128197;</span><span id="precios-vig"></span></div><div style="background:#FFF2CC;border:.5px solid #C9A227;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:#7D6608;font-weight:600;">Precios netos $/Kg &#183; Verificar stock antes de ofrecer &#183; <span style="font-weight:500;">La etiqueta roja indica cu&#225;nto m&#225;s barata es la lista Volumen.</span></div><input class="sb" id="sb-p" placeholder="Buscar producto..."><div class="fbtns" id="fb-precios-cat" style="margin:8px 0;"></div><div id="precios"></div></div></div>
 <div class="page" id="page-bono"><div class="pi"><div class="sec" id="tit-bono">Bono de Gesti&#243;n &#8212; Julio 2026</div><div id="foco-bono-box" style="background:#E2EFDA;border:.5px solid #97C459;border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:12px;color:#375623;font-weight:600;"></div><div class="fbtns" id="fb-bono"></div><div id="bono" class="bono-grid"></div></div></div>
@@ -730,6 +731,9 @@ tr:hover td{background:#fafafa;}
   </div>
 </div>
 
+<div class="sec" style="margin-top:22px;">&#128230; Gesti&#243;n de inventario</div>
+<div class="acc" id="acc-inm"><div class="acc-h" onclick="togAcc('acc-inm')"><span class="acc-t" style="color:#7D6608;">&#128993; Sin venta (inmovilizados)</span><span class="acc-s" id="inm-count-txt"></span><span class="acc-a">&#9660;</span></div><div class="acc-b"><div style="font-size:10px;color:#888;margin:6px 0 8px;">Congelados con 200&#8211;249 d&#237;as de estad&#237;a. Clic en un producto para ver sus lotes.</div><div id="inm-d"></div></div></div>
+<div class="acc" id="acc-ext"><div class="acc-h" onclick="togAcc('acc-ext')"><span class="acc-t" style="color:#C00000;">&#128308; Estad&#237;a cr&#237;tica</span><span class="acc-s" id="ext-count-txt"></span><span class="acc-a">&#9660;</span></div><div class="acc-b"><div style="font-size:10px;color:#888;margin:6px 0 8px;">Productos en sem&#225;foro rojo (vac&#237;o &#8805;75d &middot; congelado &#8805;250d). Clic en un producto para ver sus lotes.</div><div id="ext-d"></div></div></div>
 <div class="sec" style="margin-top:22px;">Stock Completo &#8212; Todas las categor&#237;as, ordenado por d&#237;as de estad&#237;a</div>
 <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
   <input class="sb" id="sb-om" placeholder="Buscar producto o categor&#237;a..." style="flex:1;min-width:200px;margin:0">
@@ -972,6 +976,7 @@ function go(n,el){
   if(n==='stock' && typeof aplicarVisibilidadCosto==='function'){ try{ aplicarVisibilidadCosto(); }catch(e){} }
   if(n==='stock' && typeof renderSupply==='function'){ try{ renderSupply(); }catch(e){} }
   if(n==='historico'){ renderHist(); if(typeof aplicarVisibilidadHistGraf==='function'){ try{ aplicarVisibilidadHistGraf(); }catch(e){} } }
+  if(n==='ops' && typeof renderInventarioGestion==='function'){ try{ renderInventarioGestion(); }catch(e){} }
   if(n==='seguridad') renderAccesos();
   if(n==='logistica') renderLogistica();
   if(n==='gastos' && typeof renderGastos==='function') renderGastos();
@@ -982,6 +987,18 @@ function goAdmin(){
   pendingPage='admin';
   document.getElementById('ol').classList.add('on');
   setTimeout(function(){document.getElementById('opsp').focus();},100);
+}
+function togAcc(id){ var e=document.getElementById(id); if(e) e.classList.toggle('open'); }
+function renderStockChips(){
+  var b=document.getElementById('stk-chips'); if(!b||!D.stats) return;
+  var st=D.stats;
+  function chip(v,l,c){ return '<div class="stk-chip"><b style="color:'+(c||'#222')+'">'+v+'</b>'+l+'</div>'; }
+  b.innerHTML=chip(Math.round(st.total_kg).toLocaleString('es-CL')+' kg','stock total')
+    +chip(st.cajas_full.toLocaleString('es-CL'),'cajas')
+    +chip(st.pct_verde+'%','OK','#375623')
+    +chip(st.pct_amarillo+'%','alerta','#C9A227')
+    +chip(st.pct_rojo+'%','cr\u00edtico','#ED7D31')
+    +chip(st.cajas_urgente.toLocaleString('es-CL'),'cajas urgentes','#C00000');
 }
 function goOps(){
   if(opsOk){go('ops',document.querySelectorAll('.tab')[10]);setTimeout(function(){buildOpsCharts();},50);return;}
@@ -997,7 +1014,7 @@ function togTransito(){
   box.style.display=abrir?'block':'none';
   if(btn) btn.className=abrir?'fbtn on':'fbtn';
   // Al ver transito se oculta el stock disponible (son universos distintos)
-  ['ts','fb-stock-cat','stock-trend-box','inv-box'].forEach(function(id){
+  ['ts','fb-stock-cat','acc-trend','acc-sply','stk-chips','inv-box'].forEach(function(id){
     var el=document.getElementById(id);
     if(!el) return;
     if(abrir){ el.setAttribute('data-prev',el.style.display||''); el.style.display='none'; }
@@ -1212,12 +1229,14 @@ function sployDetalleHtml(){
 }
 function renderSupply(){
   var box=document.getElementById('sply-box'); if(!box) return;
-  var S=D.supply; if(!S||!isAdmin){ if(box) box.style.display='none'; return; }
-  box.style.display='block';
+  var S=D.supply, wr=document.getElementById('acc-sply');
+  if(!S||!isAdmin){ if(box) box.style.display='none'; if(wr) wr.style.display='none'; return; }
+  box.style.display='block'; if(wr) wr.style.display='';
+  var ss=document.getElementById('acc-sply-s');
+  if(ss) ss.textContent='Congelado '+S.cam.CONGELADO.ocu+'/'+S.cam.CONGELADO.cap+' pos ('+S.cam.CONGELADO.uso+'%) \u00b7 Vac\u00edo '+S.cam.VACIO.ocu+'/'+S.cam.VACIO.cap+' pos ('+S.cam.VACIO.uso+'%) \u00b7 Rampla '+S.resumen.reponer+' SKU \u00b7 Liberar '+S.resumen.libera_pos+' pos';
   var P=S.params, cnt={};
   S.prod.forEach(function(x){cnt[x.est]=(cnt[x.est]||0)+1;});
-  var h='<div class="sec" style="font-size:13px;">\u{1F4E6} Control de reposici\u00f3n \u2014 Forward DOH y capacidad</div>'
-   +'<div style="background:#FDF0F0;border-left:3px solid #8C1717;border-radius:0 6px 6px 0;padding:6px 10px;margin-bottom:9px;font-size:10px;color:#8C1717;">'
+  var h='<div style="margin-top:8px;background:#FDF0F0;border-left:3px solid #8C1717;border-radius:0 6px 6px 0;padding:6px 10px;margin-bottom:9px;font-size:10px;color:#8C1717;">'
    +'<b>Vista exclusiva de administraci\u00f3n.</b> Lead time '+P.lt+' d + revisi\u00f3n '+P.rev+' d = ventana '+P.ltr+' d \u00b7 NS 97% (z='+P.z+') \u00b7 SS = '+P.factor_ss+' \u00d7 demanda diaria \u00b7 '+P.kg_pos+' kg/posici\u00f3n</div>';
   // camaras
   h+='<div class="g2" style="margin-bottom:10px;">';
@@ -1628,12 +1647,12 @@ function renderAlertTable(containerId,items,prefix){
   c.innerHTML=h;
 }
 function renderInventarioGestion(){
-  renderAlertTable('inm-d',(D.alertas_inmov||[]).slice(0,10),'v');
-  renderAlertTable('ext-d',(D.alertas_ext||[]).slice(0,10),'e');
-  var ic=document.getElementById('inm-count-txt');
-  if(ic) ic.textContent='Sin venta (inmovilizados) \u2014 top 10 de '+(D.alertas_inmov?D.alertas_inmov.length:0)+' items';
-  var ec=document.getElementById('ext-count-txt');
-  if(ec) ec.textContent='Estad\u00eda cr\u00edtica (>90d) \u2014 top 10 de '+(D.alertas_ext?D.alertas_ext.length:0)+' productos';
+  var AI=D.alertas_inmov||[], AE=D.alertas_ext||[];
+  renderAlertTable('inm-d',AI,'v');
+  renderAlertTable('ext-d',AE,'e');
+  function sumTxt(L){ var cj=0,kg=0; L.forEach(function(x){cj+=x.cajas;kg+=x.kg;}); return L.length+' producto'+(L.length!==1?'s':'')+' \u00b7 '+cj.toLocaleString('es-CL')+' cajas \u00b7 '+Math.round(kg).toLocaleString('es-CL')+' kg'; }
+  var ic=document.getElementById('inm-count-txt'); if(ic) ic.textContent=sumTxt(AI);
+  var ec=document.getElementById('ext-count-txt'); if(ec) ec.textContent=sumTxt(AE);
 
   // Productos gestionables urgentes: congelados (no Vacio) con estadia >= 340 dias (SOLO las cajas/lotes que realmente superan el umbral)
   var VACIO_CATS_INV={'VACUNO IMPORTADO':1,'VACUNO A PUNTO':1,'ELABORADOS A PUNTO':1};
@@ -1651,7 +1670,8 @@ function renderInventarioGestion(){
   urgentes.sort(function(a,b){return b.est_max-a.est_max;});
   var totalCajasUrg=urgentes.reduce(function(s,it){return s+it.cajas_urg;},0);
   var uc=document.getElementById('urg-count-txt');
-  if(uc) uc.textContent='Productos gestionables urgentes \u2014 '+urgentes.length+' producto(s), '+totalCajasUrg+' cajas';
+  if(uc) uc.textContent=urgentes.length+' producto'+(urgentes.length!==1?'s':'')+' \u00b7 '+totalCajasUrg.toLocaleString('es-CL')+' cajas sobre '+UMBRAL_URG+' d\u00edas';
+  try{ renderStockChips(); }catch(e){}
   var us=document.getElementById('urg-sub-txt');
   if(us) us.textContent='Congelados con '+UMBRAL_URG+'+ d\u00edas de estad\u00eda \u2014 solo las cajas/lotes que realmente superan el umbral, foco de liquidaci\u00f3n inmediata';
   var urgBox=document.getElementById('urg-d');
@@ -1701,10 +1721,11 @@ var CAT_EMOJI={'AVE':'\u{1F414}','CERDO':'\u{1F416}','VACUNO IMPORTADO':'\u{1F40
 function renderStockTrendBox(){
   var box=document.getElementById('stock-trend-box');
   if(!box) return;
-  if(!isAdmin){ box.style.display='none'; return; }
+  var wr=document.getElementById('acc-trend');
+  if(!isAdmin){ box.style.display='none'; if(wr) wr.style.display='none'; return; }
   var H=D.stock_historial;
-  if(!H || !H.categorias || !H.categorias.length){ box.style.display='none'; return; }
-  box.style.display='';
+  if(!H || !H.categorias || !H.categorias.length){ box.style.display='none'; if(wr) wr.style.display='none'; return; }
+  box.style.display=''; if(wr) wr.style.display='';
 
   var fechas=H.fechas; // [hace2sem, hace1sem, hoy]
   var lblHoy=fechas[2], lbl1=fechas[1], lbl2=fechas[0];
@@ -1735,9 +1756,9 @@ function renderStockTrendBox(){
   alerts=alerts.slice(0,6);
 
   var toneStyle={good:{bg:'#E8F5E9',bd:'#375623',fg:'#1e3a20'},bad:{bg:'#FDECEC',bd:'#C00000',fg:'#5c0f0f'},watch:{bg:'#FFF8E7',bd:'#C9A227',fg:'#5c4a0f'}};
-  var html='<div class="sec" style="color:#7030A0;display:flex;align-items:center;gap:8px;">'
-    +'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#375623;box-shadow:0 0 6px #375623;"></span>'
-    +'Insights de stock (solo administrador)</div>';
+  var tsm=document.getElementById('acc-trend-s');
+  if(tsm){ var nb=alerts.filter(function(a){return a.tone==='bad';}).length; tsm.textContent=(alerts.length?alerts.length+' alerta'+(alerts.length!==1?'s':'')+(nb?' ('+nb+' cr\u00edtica'+(nb!==1?'s':'')+')':''):'Sin variaciones fuertes')+' \u00b7 '+H.fechas[1]+' \u2192 '+H.fechas[2]; }
+  var html='<div style="height:8px"></div>';
   if(!alerts.length){
     html+='<div style="background:#F9F6FC;border-radius:8px;padding:12px;font-size:11px;color:#888;">Sin variaciones fuertes de stock por categor\u00eda esta semana.</div>';
   } else {
