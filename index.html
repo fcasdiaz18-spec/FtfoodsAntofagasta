@@ -53,6 +53,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;color:#1a
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
 .g3{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.mixev-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}@media(max-width:720px){.mixev-grid{grid-template-columns:1fr;}}
 .card{background:#fff;border-radius:10px;padding:13px 15px;border:.5px solid #e0e0e0;}
 .lbl{font-size:11px;color:#888;font-weight:600;margin-bottom:3px;}
 .val{font-size:20px;font-weight:700;}
@@ -513,6 +514,18 @@ tr:hover td{background:#fafafa;}
 <div class="page" id="page-categorias"><div class="pi"><div class="sec">Mix por categoria</div><div class="fbtns" id="fb-cat-v"><button class="fbtn on" data-n="Todos" onclick="selCat('Todos',this)">Sucursal</button></div>
 <table id="tcat" style="margin-bottom:16px;"></table>
 <div id="c3" style="display:none;"></div>
+<div class="sec" style="margin-top:4px;">Evoluci&#243;n del mix &#8212; % participaci&#243;n por cierre de mes <span style="font-weight:400;color:#888;font-size:11px;">Sucursal &middot; sobre facturaci&#243;n neta</span></div>
+<div class="card" id="mixev-card" style="padding:12px 14px;margin-bottom:16px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+    <div style="font-size:11px;color:#666;">Cierres hist&#243;ricos + mes en curso (l&#237;nea punteada, parcial). Clic en la leyenda para ocultar/mostrar una categor&#237;a.</div>
+    <label style="font-size:11px;color:#444;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="mixev-actual" checked onchange="renderMixEvol()"> Incluir mes en curso</label>
+  </div>
+  <div class="mixev-grid">
+    <div><div style="font-size:11px;font-weight:700;color:#1a2744;margin-bottom:4px;">Vacunos frescos</div><div style="position:relative;height:230px;"><canvas id="mixev-c1"></canvas></div></div>
+    <div><div style="font-size:11px;font-weight:700;color:#1a2744;margin-bottom:4px;">Resto de categor&#237;as</div><div style="position:relative;height:230px;"><canvas id="mixev-c2"></canvas></div></div>
+  </div>
+  <div id="mixev-ins" style="margin-top:12px;"></div>
+</div>
 <div class="sec">Apertura G2 &#8212; <span id="g2-titulo">Sucursal Antofagasta</span></div>
 <div class="card cat-rank-card" style="padding:14px;"><div id="c-g2" class="cat-rank-list cat-rank-list-sm"></div></div>
 
@@ -980,6 +993,7 @@ function go(n,el){
   if(n==='seguridad') renderAccesos();
   if(n==='logistica') renderLogistica();
   if(n==='gastos' && typeof renderGastos==='function') renderGastos();
+  if(n==='categorias' && typeof renderMixEvol==='function'){ setTimeout(function(){ try{ renderMixEvol(); }catch(e){ console.error(e); } },50); }
 }
 function goAdmin(){
   if(opsOk){go('admin',document.querySelectorAll('.tab')[9]);renderAdmin();return;}
@@ -2474,6 +2488,104 @@ function buildG2Chart(n){
   renderRankList('c-g2',withColor,{icon:false});
 }
 
+
+/* ===== Evolucion del mix por categoria (% participacion por cierre de mes) ===== */
+var mixEvCharts={};
+var MIXEV_GRUPO1=['VACUNO IMPORTADO','VACUNO NACIONAL'];
+var MIXEV_GRUPO2=['CERDO','AVE','VACUNO CONGELADO - DESPOSTE','ELABORADOS','SUBPRODUCTOS','OTROS'];
+var MIXEV_COLOR={'VACUNO IMPORTADO':'#C00000','VACUNO NACIONAL':'#1F4E79','CERDO':'#ED7D31','AVE':'#4472C4',
+  'VACUNO CONGELADO - DESPOSTE':'#375623','ELABORADOS':'#7030A0','SUBPRODUCTOS':'#B8860B','OTROS':'#8A8A8A'};
+var MIXEV_LBL={'VACUNO CONGELADO - DESPOSTE':'Congelado desposte','VACUNO IMPORTADO':'Vacuno importado','VACUNO NACIONAL':'Vacuno nacional',
+  'CERDO':'Cerdo','AVE':'Ave','ELABORADOS':'Elaborados','SUBPRODUCTOS':'Subproductos','OTROS':'Otros'};
+function mixEvNorm(cat){
+  return (MIXEV_GRUPO1.indexOf(cat)>-1||MIXEV_GRUPO2.indexOf(cat)>-1)?cat:'OTROS';
+}
+function mixEvMes(lista){
+  var tot=0,acc={};
+  (lista||[]).forEach(function(c){var f=+c.fact||0; tot+=f; var k=mixEvNorm(c.cat); acc[k]=(acc[k]||0)+f;});
+  var out={}; Object.keys(acc).forEach(function(k){out[k]=tot?acc[k]/tot*100:0;}); return out;
+}
+function mixEvSerie(){
+  var meses=[],data=[];
+  (typeof HIST!=='undefined'?HIST:[]).forEach(function(h){
+    if(!h||!h.cat_global||!h.cat_global.length) return;
+    meses.push(String(h.mes||'').replace(/ \d{4}$/,'').substring(0,3)); data.push(mixEvMes(h.cat_global));
+  });
+  var nCierres=meses.length, actual=null;
+  var chk=document.getElementById('mixev-actual');
+  if((!chk||chk.checked) && D.cat_global && D.cat_global.length){
+    var mLbl='Actual';
+    var f=(D.kpis&&D.kpis.fecha)||''; var pm=f.split('-');
+    if(pm.length===3 && typeof MESES_C!=='undefined') mLbl=(MESES_C[+pm[1]]||'Actual').substring(0,3);
+    meses.push(mLbl+'*'); actual=mixEvMes(D.cat_global); data.push(actual);
+  }
+  return {meses:meses,data:data,nCierres:nCierres,actual:actual};
+}
+function mixEvChart(id,cats,S){
+  var el=document.getElementById(id); if(!el||typeof Chart==='undefined') return;
+  if(mixEvCharts[id]){ try{ mixEvCharts[id].destroy(); }catch(e){} }
+  var nC=S.nCierres;
+  var ds=cats.map(function(cat){
+    var col=MIXEV_COLOR[cat]||'#888';
+    return {label:MIXEV_LBL[cat]||cat,data:S.data.map(function(m){return Math.round((m[cat]||0)*10)/10;}),
+      borderColor:col,backgroundColor:col,borderWidth:2.2,cubicInterpolationMode:'monotone',
+      pointRadius:S.data.map(function(_,i){return i>=nC?4:3;}),
+      pointStyle:S.data.map(function(_,i){return i>=nC?'rectRot':'circle';}),
+      pointBackgroundColor:S.data.map(function(_,i){return i>=nC?'#fff':col;}),
+      segment:{borderDash:function(c){return c.p1DataIndex>=nC?[5,4]:undefined;}}};
+  });
+  mixEvCharts[id]=new Chart(el.getContext('2d'),{type:'line',data:{labels:S.meses,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10},usePointStyle:true}},
+        tooltip:{callbacks:{
+          title:function(it){var i=it[0].dataIndex; return it[0].label.replace('*','')+(i>=nC?' (en curso, parcial)':' (cierre)');},
+          label:function(c){return c.dataset.label+': '+c.parsed.y.toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}}}},
+      scales:{y:{min:id==='mixev-c2'?0:undefined,ticks:{font:{size:9},callback:function(v){return v+'%';}},grid:{color:'#EFEBE6'},grace:'8%'},
+              x:{ticks:{font:{size:10}},grid:{display:false}}}}});
+}
+function renderMixEvol(){
+  var card=document.getElementById('mixev-card'); if(!card) return;
+  var S=mixEvSerie();
+  if(!S.nCierres){ card.style.display='none'; return; }
+  mixEvChart('mixev-c1',MIXEV_GRUPO1,S);
+  mixEvChart('mixev-c2',MIXEV_GRUPO2,S);
+  // Insights: ultimo cierre vs promedio de cierres anteriores; mes en curso vs ultimo cierre
+  var nC=S.nCierres, ult=S.data[nC-1], prev=S.data.slice(0,nC-1);
+  var fmt=function(v){return (v>0?'+':'')+v.toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})+' pp';};
+  var rows=[];
+  MIXEV_GRUPO1.concat(MIXEV_GRUPO2).forEach(function(cat){
+    var avg=prev.length?prev.reduce(function(s,m){return s+(m[cat]||0);},0)/prev.length:null;
+    var u=ult[cat]||0, a=S.actual?(S.actual[cat]||0):null;
+    rows.push({cat:cat,u:u,avg:avg,dAvg:avg!=null?u-avg:null,a:a,dAct:a!=null?a-u:null});
+  });
+  var umbral=function(r){var base=Math.max(r.avg||0,r.u,1); return Math.min(3,Math.max(1.5,base*0.2));};
+  var ultLbl=S.meses[nC-1];
+  var h='<div style="font-size:11px;font-weight:700;color:#1a2744;margin-bottom:6px;">Lectura del mix</div>'
+    +'<div style="overflow-x:auto;"><table style="width:100%;font-size:11px;"><tr><th style="text-align:left">Categor&#237;a</th>'
+    +'<th style="text-align:right">Prom. cierres previos</th><th style="text-align:right">Cierre '+ultLbl+'</th><th style="text-align:right">Var. vs prom.</th>'
+    +(S.actual?'<th style="text-align:right">'+S.meses[S.meses.length-1]+'</th><th style="text-align:right">Var. vs cierre</th>':'')+'</tr>';
+  var alertas=[];
+  rows.forEach(function(r){
+    var th=umbral(r);
+    var cA=r.dAvg==null?'#888':Math.abs(r.dAvg)>=th?(r.dAvg>0?'#375623':'#C00000'):'#666';
+    var cB=r.dAct==null?'#888':Math.abs(r.dAct)>=th?(r.dAct>0?'#375623':'#C00000'):'#666';
+    if(r.dAct!=null && Math.abs(r.dAct)>=th) alertas.push({t:(MIXEV_LBL[r.cat]||r.cat)+' '+(r.dAct>0?'sube':'baja')+' '+fmt(r.dAct)+' en el mes en curso vs cierre '+ultLbl,up:r.dAct>0});
+    else if(r.dAvg!=null && Math.abs(r.dAvg)>=th) alertas.push({t:(MIXEV_LBL[r.cat]||r.cat)+' '+(r.dAvg>0?'sobre':'bajo')+' su promedio hist&#243;rico ('+fmt(r.dAvg)+') al cierre '+ultLbl,up:r.dAvg>0});
+    var p1=function(v){return v==null?'&#8212;':v.toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';};
+    h+='<tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+(MIXEV_COLOR[r.cat]||'#888')+';margin-right:6px;vertical-align:middle;"></span>'+(MIXEV_LBL[r.cat]||r.cat)+'</td>'
+      +'<td style="text-align:right">'+p1(r.avg)+'</td><td style="text-align:right;font-weight:600">'+p1(r.u)+'</td>'
+      +'<td style="text-align:right;font-weight:700;color:'+cA+'">'+(r.dAvg==null?'&#8212;':fmt(r.dAvg))+'</td>'
+      +(S.actual?'<td style="text-align:right;font-weight:600">'+p1(r.a)+'</td><td style="text-align:right;font-weight:700;color:'+cB+'">'+fmt(r.dAct)+'</td>':'')+'</tr>';
+  });
+  h+='</table></div>';
+  if(alertas.length){
+    h='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">'+alertas.map(function(a){
+      return '<span style="font-size:11px;padding:4px 9px;border-radius:12px;background:'+(a.up?'#EAF3E6':'#FBE9E9')+';color:'+(a.up?'#1e3a20':'#5c0f0f')+';">'+(a.up?'&#9650; ':'&#9660; ')+a.t+'</span>';
+    }).join('')+'</div>'+h;
+  }
+  h+='<div style="font-size:10px;color:#888;margin-top:6px;">pp = puntos porcentuales. Se destaca un movimiento cuando supera el 20% del peso de la categor&#237;a (m&#237;n. 1,5 pp, m&#225;x. 3 pp). * Mes en curso: participaci&#243;n parcial a la fecha de corte ('+((D.kpis&&D.kpis.fecha)||'')+'). Hist&#243;rico solo a nivel sucursal.</div>';
+  document.getElementById('mixev-ins').innerHTML=h;
+}
 var catFiltActual='Todos';
 function buildCatTable(data){
   var h='<tr><th>Categoria</th><th>Part. %</th><th style="text-align:right">Monto Neto</th><th style="text-align:right">Kilos</th><th style="text-align:right">Margen %</th></tr>';
