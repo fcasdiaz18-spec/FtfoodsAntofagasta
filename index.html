@@ -138,6 +138,45 @@ tr:hover td{background:#fafafa;}
 @media(max-width:768px){.cat-grid{grid-template-columns:1fr;}}
 .ops-grid{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start;margin-bottom:8px;}
 @media(max-width:768px){.ops-grid{grid-template-columns:1fr;}}
+/* ---- OPS: gestion urgente + orden ---- */
+.osort{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#fff;border:.5px solid #e0e0e0;border-radius:10px;padding:8px 12px;margin:6px 0 10px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.osort .ol1{font-size:11px;font-weight:700;color:#555;margin-right:2px}
+.osb{padding:6px 12px;border-radius:20px;border:1px solid #ddd;background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:#444;display:inline-flex;align-items:center;gap:4px}
+.osb.on{background:#9C1C1C;border-color:#9C1C1C;color:#fff}
+.osort .ohint{font-size:10px;color:#999;margin-left:auto}
+.urg-box{background:linear-gradient(180deg,#FFF5F5,#fff 120px);border:1.5px solid #C00000;border-radius:12px;padding:14px;margin-bottom:14px}
+.urg-hd{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.urg-tt{font-size:15px;font-weight:800;color:#9C1C1C}
+.urg-st{font-size:11px;color:#666;margin-top:2px}
+.urg-act{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.urg-btn{padding:6px 12px;border-radius:6px;border:none;background:#1F1F1F;color:#fff;font-size:11px;font-weight:600;cursor:pointer}
+.urg-btn.wa{background:#25A244}
+.urg-kp{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.urg-kp div{background:#fff;border:.5px solid #eee;border-radius:8px;padding:8px 10px}
+.urg-kp b{display:block;font-size:17px;color:#C00000}
+.urg-kp span{font-size:10px;color:#888}
+.urg-prog{height:8px;background:#eee;border-radius:5px;overflow:hidden;margin:2px 0 10px}
+.urg-prog i{display:block;height:100%;background:linear-gradient(90deg,#375623,#6AA84F);transition:width .4s}
+.urg-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.urg-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+.uc{background:#fff;border:.5px solid #e6e6e6;border-left:5px solid #C00000;border-radius:9px;padding:10px 12px;font-size:11px}
+.uc.s-gest{border-left-color:#C9A227}.uc.s-ofer{border-left-color:#1F4E79}.uc.s-vend{border-left-color:#375623;opacity:.75}.uc.s-merma{border-left-color:#777;opacity:.75}
+.uc-h{display:flex;gap:8px;align-items:flex-start}
+.uc-n{font-weight:800;font-size:12.5px;color:#1F1F1F;line-height:1.25}
+.uc-m{font-size:10px;color:#888;margin-top:1px}
+.uc-e{margin-left:auto;background:#C00000;color:#fff;border-radius:6px;padding:3px 8px;font-weight:800;font-size:12px;white-space:nowrap}
+.uc-e.pr{background:#ED7D31}
+.uc-q{font-size:13px;font-weight:700;margin:6px 0 4px;color:#9C1C1C}
+.uc-q small{font-weight:400;color:#888;font-size:10px}
+.uc-l{width:100%;border-collapse:collapse;margin:2px 0 6px}
+.uc-l td{padding:2px 4px;border-bottom:.5px dashed #eee;font-size:10.5px}
+.uc-c{font-size:10px;color:#555;background:#F6F8FB;border-radius:6px;padding:5px 7px;margin-bottom:6px}
+.uc-f{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.uc-f select,.uc-f input{width:100%;padding:5px 6px;border-radius:6px;border:.5px solid #ddd;font-size:11px;background:#fff;box-sizing:border-box}
+.uc-f input{grid-column:1/3}
+.uc-u{font-size:9.5px;color:#999;margin-top:4px}
+.urg-empty{padding:18px;text-align:center;color:#375623;font-weight:600}
+@media(max-width:700px){.urg-kp{grid-template-columns:1fr 1fr}.urg-list{grid-template-columns:1fr}.urg-act{margin-left:0}}
 .ops-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px;}
 @media(max-width:900px){.ops-kpis{grid-template-columns:1fr 1fr 1fr;}}
 @media(max-width:520px){.ops-kpis{grid-template-columns:1fr 1fr;}}
@@ -718,7 +757,9 @@ tr:hover td{background:#fafafa;}
   <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>D&iacute;as</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th><th>Editar</th></tr>
 </table>
 </div></div>
-<div class="page" id="page-ops"><div class="pi"><div class="sec" id="tit-ops">Panel de Operaciones &#8212; 02-09-2026</div><div class="ops-kpis" id="ok"></div>
+<div class="page" id="page-ops"><div class="pi"><div class="sec" id="tit-ops">Panel de Operaciones &#8212; 02-09-2026</div><div class="osort" id="ops-sort"><span class="ol1">Ordenar por:</span><button class="osb on" data-k="est" onclick="setOpsSort('est')">&#9200; Estad&#237;a <span class="od"></span></button><button class="osb" data-k="kg" onclick="setOpsSort('kg')">&#9878; Kilos <span class="od"></span></button><button class="osb" data-k="cajas" onclick="setOpsSort('cajas')">&#128230; Cajas <span class="od"></span></button><span class="ohint">Clic de nuevo invierte el orden &middot; aplica al resumen y a todas las tablas</span></div>
+<div class="urg-box" id="urg-box"></div>
+<div class="ops-kpis" id="ok"></div>
 
 <div class="sec" style="color:#1F4E79;margin-top:6px;">&#10052; Al Vac&#237;o <span style="font-weight:400;color:#888;font-size:11px;">Vacuno Importado &middot; A Punto &middot; &ge;70d cr&#237;t &middot; 40-69d alerta</span></div>
 <div class="ops-grid">
@@ -747,7 +788,7 @@ tr:hover td{background:#fafafa;}
 <div class="sec" style="margin-top:22px;">&#128230; Gesti&#243;n de inventario</div>
 <div class="acc" id="acc-inm"><div class="acc-h" onclick="togAcc('acc-inm')"><span class="acc-t" style="color:#7D6608;">&#128993; Sin venta (inmovilizados)</span><span class="acc-s" id="inm-count-txt"></span><span class="acc-a">&#9660;</span></div><div class="acc-b"><div style="font-size:10px;color:#888;margin:6px 0 8px;">Congelados con 200&#8211;249 d&#237;as de estad&#237;a. Clic en un producto para ver sus lotes.</div><div id="inm-d"></div></div></div>
 <div class="acc" id="acc-ext"><div class="acc-h" onclick="togAcc('acc-ext')"><span class="acc-t" style="color:#C00000;">&#128308; Estad&#237;a cr&#237;tica</span><span class="acc-s" id="ext-count-txt"></span><span class="acc-a">&#9660;</span></div><div class="acc-b"><div style="font-size:10px;color:#888;margin:6px 0 8px;">Productos en sem&#225;foro rojo (vac&#237;o &#8805;75d &middot; congelado &#8805;250d). Clic en un producto para ver sus lotes.</div><div id="ext-d"></div></div></div>
-<div class="sec" style="margin-top:22px;">Stock Completo &#8212; Todas las categor&#237;as, ordenado por d&#237;as de estad&#237;a</div>
+<div class="sec" style="margin-top:22px;">Stock Completo &#8212; Todas las categor&#237;as</div>
 <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
   <input class="sb" id="sb-om" placeholder="Buscar producto o categor&#237;a..." style="flex:1;min-width:200px;margin:0">
   <select id="fl-om" style="padding:7px 10px;border-radius:6px;border:.5px solid #ddd;font-size:12px;" onchange="filterOpsFull()">
@@ -3570,7 +3611,7 @@ function buildOpsCharts(){
     document.getElementById(legendId).innerHTML=lg;
   }
   // c4: Al Vac\u00edo
-  var vc={'VACUNO IMPORTADO':1,'VACUNO A PUNTO':1,'ELABORADOS A PUNTO':1};
+  var vc=OPS_VC;
   var sv={u:0,r:0,y:0,g:0};
   D.stock_full.forEach(function(it){
     if(vc[it.cat]){var e=it.est_max;
@@ -3593,11 +3634,149 @@ function buildOpsCharts(){
     [Math.round(sc.u),Math.round(sc.r),Math.round(sc.y),Math.round(sc.g)],
     ['#C00000','#ED7D31','#FFC000','#375623'],'Congelados');
   // Tablas por grupo (ya vienen ordenadas por dias de estadia desc desde D.stock_full)
-  var stockVacio=D.stock_full.filter(function(it){return vc[it.cat];});
-  var stockCongelado=D.stock_full.filter(function(it){return !vc[it.cat];});
-  buildOpsTbl(stockVacio,'tov');
-  buildOpsTbl(stockCongelado,'toz');
-  buildOpsTbl(D.stock_full,'tom');
+  renderOpsTables();
+  renderUrg();
+  initOpsGestion();
+}
+
+
+// ===== OPS: orden + gestion urgente =====
+var OPS_VC={'VACUNO IMPORTADO':1,'VACUNO A PUNTO':1,'ELABORADOS A PUNTO':1,'VACUNO A PUNTO CONGELADO':1,'ELABORADOS A PUNTO CONGELADO':1};
+var opsSort={k:'est',dir:-1};
+var urgView='crit', urgFilt='todos';
+var opsGest={}, opsGestInit=false;
+var URG_ST=[['pend','Pendiente'],['gest','En gestión'],['ofer','Ofrecido a cliente'],['vend','Vendido / despachado'],['merma','Merma / descarte']];
+var URG_RES={vend:1,merma:1};
+function ftN(n,d){return Number(n||0).toLocaleString('es-CL',{maximumFractionDigits:d==null?0:d});}
+function escH(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function opsTipo(mat,cat){
+  if(!opsTipo._m){opsTipo._m={};((D.supply&&D.supply.prod)||[]).forEach(function(p){opsTipo._m[p.mat]=p.tipo;});}
+  return opsTipo._m[mat]||(OPS_VC[cat]?'VACIO':'CONGELADO');
+}
+function opsKey(g){return opsSort.k==='kg'?g.total_kg:opsSort.k==='cajas'?g.total_cajas:g.est_max;}
+function opsSorted(arr){
+  return arr.slice().sort(function(a,b){var d=(opsKey(a)-opsKey(b))*opsSort.dir;return d||(b.est_max-a.est_max)||(b.total_kg-a.total_kg);});
+}
+function setOpsSort(k){
+  if(opsSort.k===k) opsSort.dir*=-1; else {opsSort.k=k;opsSort.dir=-1;}
+  renderOpsTables(); renderUrg();
+}
+function paintSortBar(){
+  document.querySelectorAll('#ops-sort .osb').forEach(function(b){
+    var on=b.getAttribute('data-k')===opsSort.k;
+    b.classList.toggle('on',on);
+    b.querySelector('.od').textContent=on?(opsSort.dir<0?'↓':'↑'):'';
+  });
+}
+function renderOpsTables(){
+  var v=[],z=[];
+  D.stock_full.forEach(function(it){(OPS_VC[it.cat]?v:z).push(it);});
+  buildOpsTbl(opsSorted(v),'tov');
+  buildOpsTbl(opsSorted(z),'toz');
+  buildOpsTbl(opsSorted(D.stock_full),'tom');
+  ['sb-ov','sb-oz'].forEach(function(id){var e=document.getElementById(id);if(e&&e.value)e.dispatchEvent(new Event('input'));});
+  filterOpsFull();
+  paintSortBar();
+}
+// lotes criticos (ahora) o que entran a critico en <=7 dias
+function urgItems(view){
+  var out=[];
+  D.stock_full.forEach(function(g){
+    var t=opsTipo(g.mat,g.cat), lim=(t==='VACIO'?75:250);
+    var L=g.cajas_det.filter(function(c){
+      var crit=c.urgente||c.sem==='r';
+      return view==='crit'?crit:(!crit&&c.est>=lim-7);
+    });
+    if(!L.length) return;
+    L=L.slice().sort(function(a,b){return b.est-a.est;});
+    var cj=0,kg=0,em=0;L.forEach(function(c){cj+=c.cajas;kg+=c.kg;em=Math.max(em,c.est);});
+    out.push({mat:g.mat,desc:g.desc,cat:g.cat,tipo:t,lim:lim,lotes:L,total_cajas:cj,total_kg:Math.round(kg*10)/10,est_max:em,
+      urg:L.some(function(c){return c.urgente;}),stock_kg:g.total_kg,stock_cj:g.total_cajas});
+  });
+  return opsSorted(out);
+}
+function urgClientes(mat){
+  var r=[];
+  (D.clientes||[]).forEach(function(c){
+    (c.productos||[]).forEach(function(p){if(String(p.cod)===String(mat)) r.push({cli:c.cli,vend:c.vend,fact:p.fact});});
+  });
+  r.sort(function(a,b){return b.fact-a.fact;});
+  return r.slice(0,3);
+}
+function urgFecha(){var f=(D.stock_historial&&D.stock_historial.fechas||[]).slice(-1)[0]||'';var q=f.split('-');return q.length===3?q[2]+'-'+q[1]+'-'+q[0]:f;}
+function nomCorto(n){return String(n||'').replace(/\s+(CON|VAC|FRE)(\s.*)?$/,'').trim();}
+function urgSt(mat){return (opsGest[mat]&&opsGest[mat].st)||'pend';}
+function renderUrg(){
+  var box=document.getElementById('urg-box'); if(!box) return;
+  var all=urgItems(urgView), crit=urgView==='crit'?all:urgItems('crit'), prox=urgView==='prox'?all:urgItems('prox');
+  var res=crit.filter(function(x){return URG_RES[urgSt(x.mat)];}).length;
+  var kgPend=crit.filter(function(x){return !URG_RES[urgSt(x.mat)];}).reduce(function(a,x){return a+x.total_kg;},0);
+  var cjT=crit.reduce(function(a,x){return a+x.total_cajas;},0), kgT=crit.reduce(function(a,x){return a+x.total_kg;},0);
+  var pct=crit.length?Math.round(res/crit.length*100):100;
+  var list=all.filter(function(x){var s=urgSt(x.mat);
+    return urgFilt==='todos'||(urgFilt==='pend'&&s==='pend')||(urgFilt==='curso'&&(s==='gest'||s==='ofer'))||(urgFilt==='res'&&URG_RES[s]);});
+  var vends=(D.vendedores||[]).map(function(v){return v.nombre;}).concat(['Felipe Castillo','Bodega']);
+  var fb=function(k,l,n){return '<button class="fbtn'+(urgFilt===k?' on':'')+'" onclick="urgFilt=\''+k+'\';renderUrg()">'+l+(n!=null?' ('+n+')':'')+'</button>';};
+  var cnt=function(f){return all.filter(function(x){var s=urgSt(x.mat);return f(s);}).length;};
+  var h='<div class="urg-hd"><div><div class="urg-tt">&#128680; Resumen de gestión urgente</div>'
+    +'<div class="urg-st">Stock al '+escH(urgFecha())+' &middot; lotes en rojo (vacío ≥75d &middot; congelado ≥250d) y urgentes ⚠</div></div>'
+    +'<div class="urg-act"><button class="urg-btn wa" onclick="copyUrg()">&#128203; Copiar para WhatsApp</button></div></div>'
+    +'<div class="urg-kp"><div><b>'+crit.length+'</b><span>productos críticos</span></div><div><b>'+ftN(cjT)+'</b><span>cajas críticas</span></div>'
+    +'<div><b>'+ftN(kgT)+' kg</b><span>kilos críticos</span></div><div><b style="color:#375623">'+res+'/'+crit.length+'</b><span>resueltos &middot; '+ftN(kgPend)+' kg pendientes</span></div></div>'
+    +'<div class="urg-prog"><i style="width:'+pct+'%"></i></div>'
+    +'<div class="urg-tabs"><button class="osb'+(urgView==='crit'?' on':'')+'" onclick="urgView=\'crit\';renderUrg()">&#128308; Críticos ahora ('+crit.length+')</button>'
+    +'<button class="osb'+(urgView==='prox'?' on':'')+'" onclick="urgView=\'prox\';renderUrg()">&#128993; Entran a crítico en 7 días ('+prox.length+')</button>'
+    +'<span style="width:10px"></span>'+fb('todos','Todos')+fb('pend','Pendientes',cnt(function(s){return s==='pend';}))
+    +fb('curso','En curso',cnt(function(s){return s==='gest'||s==='ofer';}))+fb('res','Resueltos',cnt(function(s){return !!URG_RES[s];}))+'</div>';
+  if(!list.length){h+='<div class="urg-empty">&#9989; Nada en esta vista.</div>';box.innerHTML=h;return;}
+  h+='<div class="urg-list">';
+  list.forEach(function(x){
+    var g=opsGest[x.mat]||{}, st=g.st||'pend', cl=urgClientes(x.mat);
+    var falta=x.lim-x.est_max;
+    h+='<div class="uc s-'+st+'"><div class="uc-h"><div><div class="uc-n">'+escH(nomCorto(x.desc))+'</div><div class="uc-m">'+x.mat+' &middot; '+escH(x.cat)+' &middot; '+(x.tipo==='VACIO'?'Vacío':'Congelado')+'</div></div>'
+      +'<div class="uc-e'+(urgView==='prox'?' pr':'')+'">'+x.est_max+' días'+(x.urg?' ⚠':'')+'</div></div>'
+      +'<div class="uc-q">'+ftN(x.total_cajas)+' cjs &middot; '+ftN(x.total_kg,1)+' kg <small>'+(urgView==='prox'?'(entra a rojo en '+Math.max(falta,0)+' d)':'')+' de '+ftN(x.stock_kg,1)+' kg en stock</small></div>'
+      +'<table class="uc-l">'+x.lotes.map(function(c){return '<tr><td>Lote <b>'+escH(c.lote)+'</b><br><span style="color:#999">'+[c.folio?'Folio '+escH(c.folio):'',c.fecha?'Prod. '+escH(c.fecha):''].filter(Boolean).join(' &middot; ')+'</span></td><td style="text-align:right">'+c.cajas+' cjs</td><td style="text-align:right">'+ftN(c.kg,1)+' kg</td><td style="text-align:right;font-weight:700;color:'+(c.urgente?'#C00000':'#ED7D31')+'">'+c.est+'d'+(c.urgente?' ⚠':'')+'</td></tr>';}).join('')+'</table>'
+      +(cl.length?'<div class="uc-c">&#128161; <b>Ofrecer a</b> (compraron este mes): '+cl.map(function(c){return escH(c.cli)+' <span style="color:#999">('+escH(c.vend)+')</span>';}).join(' &middot; ')+'</div>':'<div class="uc-c" style="background:#FFF8E6">&#128161; Sin compras este mes: evaluar oferta/precio especial</div>')
+      +'<div class="uc-f"><select onchange="saveGest(\''+x.mat+'\',\'st\',this.value)">'+URG_ST.map(function(o){return '<option value="'+o[0]+'"'+(st===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>'
+      +'<select onchange="saveGest(\''+x.mat+'\',\'resp\',this.value)"><option value="">Responsable…</option>'+vends.map(function(v){return '<option'+(g.resp===v?' selected':'')+'>'+escH(v)+'</option>';}).join('')+'</select>'
+      +'<input placeholder="Nota / acción (ej: ofrecido a casino X a $9.990)" value="'+escH(g.nota||'')+'" onchange="saveGest(\''+x.mat+'\',\'nota\',this.value)"></div>'
+      +(g.ts?'<div class="uc-u">Actualizado '+new Date(g.ts).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+(g.by?' &middot; '+escH(g.by):'')+'</div>':'')
+      +'</div>';
+  });
+  box.innerHTML=h+'</div>';
+}
+function copyUrg(){
+  var L=urgItems(urgView);
+  var t=(urgView==='crit'?'*Resumen de gestión urgente*':'*Entran a crítico en 7 días*')+' — '+urgFecha()+'\n';
+  L.forEach(function(x){
+    var st=urgSt(x.mat), lb=URG_ST.filter(function(o){return o[0]===st;})[0][1];
+    t+='\n• '+nomCorto(x.desc)+', son '+x.total_cajas+' cjs ('+ftN(x.total_kg,1)+' kg) con '+x.est_max+' días'+(x.urg?' ⚠':'')
+      +'\n   Lotes: '+(function(){var m={},o=[];x.lotes.forEach(function(c){if(!m[c.lote]){m[c.lote]={l:c.lote,cj:0,e:0};o.push(m[c.lote]);}m[c.lote].cj+=c.cajas;m[c.lote].e=Math.max(m[c.lote].e,c.est);});return o.map(function(z){return z.l+' ('+z.cj+' cjs, '+z.e+'d)';}).join(', ');})()
+      +(st!=='pend'||(opsGest[x.mat]||{}).resp?'\n   Estado: '+lb+((opsGest[x.mat]||{}).resp?' — '+opsGest[x.mat].resp:''):'');
+  });
+  var done=function(){alert('Resumen copiado ('+L.length+' productos).');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,function(){prompt('Copia el resumen:',t);});}
+  else prompt('Copia el resumen:',t);
+}
+function saveGest(mat,k,v){
+  var g=opsGest[mat]=Object.assign({},opsGest[mat]||{});
+  g[k]=v; g.ts=Date.now(); g.by=currentUserEmail||'';
+  try{localStorage.setItem('ftopsgest',JSON.stringify(opsGest));}catch(e){}
+  renderUrg();
+  if(!fsDB){alert('Sin conexión a la base de datos: el cambio quedó solo en este equipo.');return;}
+  var o={}; o[mat]=g;
+  fsDB.collection('panel').doc('ops_gestion').set({items:o,updated:Date.now()},{merge:true})
+    .catch(function(err){alert('No se pudo guardar en la nube: '+(err&&err.message||err));});
+}
+function initOpsGestion(){
+  if(opsGestInit) return; opsGestInit=true;
+  try{var ls=localStorage.getItem('ftopsgest');if(ls){opsGest=JSON.parse(ls)||{};renderUrg();}}catch(e){}
+  if(!fsDB) return;
+  fsDB.collection('panel').doc('ops_gestion').onSnapshot(function(doc){
+    if(doc.exists){opsGest=(doc.data()||{}).items||{};try{localStorage.setItem('ftopsgest',JSON.stringify(opsGest));}catch(e){}
+      var ae=document.activeElement; if(!(ae&&ae.closest&&ae.closest('#urg-box')&&ae.tagName==='INPUT')) renderUrg();}
+  },function(err){console.warn('ops_gestion sync:',err);});
 }
 
 
