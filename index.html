@@ -1538,21 +1538,25 @@ var DEM_FILTRO='todos', DEM_ABIERTO={};
 function demF(iso){ return iso? iso.slice(8,10)+'-'+iso.slice(5,7) : ''; }
 function demSemIni(i){ var M=D.demanda.meta, d=new Date(M.hasta+'T12:00:00'); d.setDate(d.getDate()-7*(5-i)-6); return ('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2); }
 function demSemFin(i){ var M=D.demanda.meta, d=new Date(M.hasta+'T12:00:00'); d.setDate(d.getDate()-7*(5-i)); return ('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2); }
+function demSemNum(i){ var M=D.demanda.meta, d=new Date(M.hasta+'T12:00:00'); d.setDate(d.getDate()-7*(5-i));
+  var t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())), dn=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-dn);
+  var y0=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return Math.ceil(((t-y0)/864e5+1)/7); }
 function demPct(v){ return v===null||v===undefined?'—':String(v).replace('.',',')+'%'; }
 function demSpark(x){
   var a=x.sem, mm=x.sem_m||[], pp=x.sem_p||[];
-  var mx=Math.max.apply(null,a.map(function(v){return Math.max(v,0);}))||1, w=9, g=3, H=30, top=8, x0=0, out='', pts=[];
+  var mx=Math.max.apply(null,a.map(function(v){return Math.max(v,0);}))||1, w=13, g=4, H=30, top=8, x0=0, out='', pts=[], lb='';
   var mv=mm.filter(function(v){return v!==null&&v!==undefined;}), mlo=Math.min.apply(null,mv), mhi=Math.max.apply(null,mv);
   if(mv.length && mhi-mlo<4){ var c=(mhi+mlo)/2; mlo=c-2; mhi=c+2; }
   a.forEach(function(v,i){
     var h=Math.max(1,Math.round(Math.max(v,0)/mx*(H-top)));
-    out+='<rect x="'+x0+'" y="'+(H-h)+'" width="'+w+'" height="'+h+'" rx="1" fill="'+(i>=3?'#8C1717':'#C9B3B3')+'"><title>'+demSemIni(i)+' al '+demSemFin(i)+': '+nf(v)+' kg · $'+(pp[i]?nf(pp[i]):'—')+'/kg · Mg '+demPct(mm[i])+'</title></rect>';
+    out+='<rect x="'+x0+'" y="'+(H-h)+'" width="'+w+'" height="'+h+'" rx="1" fill="'+(i>=3?'#8C1717':'#C9B3B3')+'"><title>S'+demSemNum(i)+' · '+demSemIni(i)+' al '+demSemFin(i)+': '+nf(v)+' kg · $'+(pp[i]?nf(pp[i]):'—')+'/kg · Mg '+demPct(mm[i])+'</title></rect>';
+    lb+='<text x="'+(x0+w/2)+'" y="'+(H+8)+'" text-anchor="middle" font-size="7" fill="'+(i===5?'#8C1717':'#888')+'"'+(i===5?' font-weight="700"':'')+'>S'+demSemNum(i)+'</text>';
     if(mm[i]!==null&&mm[i]!==undefined) pts.push([x0+w/2, mv.length>1? 1+Math.round((mhi-mm[i])/(mhi-mlo||1)*(top+8)) : 4]);
     x0+=w+g;
   });
   var ln=pts.length>1?'<polyline points="'+pts.map(function(p){return p.join(',');}).join(' ')+'" fill="none" stroke="#C9A227" stroke-width="1.5"/>':'';
   pts.forEach(function(p){ ln+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="1.8" fill="#C9A227"/>'; });
-  return '<svg width="'+x0+'" height="'+H+'" style="vertical-align:middle;overflow:visible">'+out+ln+'</svg>';
+  return '<svg width="'+x0+'" height="'+(H+10)+'" style="vertical-align:middle;overflow:visible">'+out+ln+lb+'</svg>';
 }
 function demTend(t){
   if(t===null||t===undefined) return '<span style="color:#bbb">—</span>';
@@ -1576,7 +1580,7 @@ function demDet(x){
   var M=D.demanda.meta, h='<div style="padding:6px 10px;background:#FAFAFA;"><table style="font-size:9.5px;width:auto;margin:0"><tr style="background:#f0f0f0"><th style="text-align:left">Semana</th><th>Días</th><th style="text-align:right">Kg</th><th style="text-align:right">Kg/día</th><th style="text-align:right">$/kg</th><th style="text-align:right">Margen %</th></tr>';
   for(var i=0;i<6;i++){
     var dd=M.dsem[i]||0;
-    h+='<tr'+(i>=3?' style="font-weight:700"':'')+'><td style="text-align:left">'+demSemIni(i)+' al '+demSemFin(i)+'</td><td style="text-align:center">'+dd+'</td>'
+    h+='<tr'+(i>=3?' style="font-weight:700"':'')+'><td style="text-align:left"><b>S'+demSemNum(i)+'</b> · '+demSemIni(i)+' al '+demSemFin(i)+'</td><td style="text-align:center">'+dd+'</td>'
       +'<td style="text-align:right">'+nf(x.sem[i])+'</td><td style="text-align:right">'+(dd?nf(x.sem[i]/dd):'—')+'</td>'
       +'<td style="text-align:right">'+(x.sem_p&&x.sem_p[i]?'$'+nf(x.sem_p[i]):'—')+'</td><td style="text-align:right">'+demPct(x.sem_m?x.sem_m[i]:null)+'</td></tr>';
   }
