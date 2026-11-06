@@ -2202,6 +2202,108 @@ function renderStockTrendBox(){
 var stockCatFilt='';
 var stockSemFilt='';
 var stockSearchQ='';
+// ---- Stock: agrupar por SKU, apertura de lotes (v225: ordenable por columna) ----
+var stkSort={k:'',d:-1};
+function stkSortBy(k){
+  if(stkSort.k===k) stkSort.d=-stkSort.d; else {stkSort.k=k; stkSort.d=(k==='mat'||k==='desc'||k==='cat')?1:-1;}
+  buildStockTable(); applyStockFilters();
+}
+function buildStockTable(){
+  var skuMap={};
+  var skuOrder=[];
+  D.stock.forEach(function(r){
+    if(!skuMap[r.mat]){
+      skuMap[r.mat]={mat:r.mat,desc:r.desc,cat:r.cat,sem:r.sem,urgente:false,cajas:0,kg:0,lotesMap:{}};
+      skuOrder.push(r.mat);
+    }
+    var s=skuMap[r.mat];
+    s.cajas+=r.cajas;
+    s.kg+=r.kg;
+    // sem: worst wins (urgente > r > y > g)
+    if(r.urgente) s.urgente=true;
+    if(r.sem==='r') s.sem='r';
+    else if(r.sem==='y' && s.sem!=='r') s.sem='y';
+    // Consolidar por lote (no caja por caja): sumar cajas/kg, juntar folios
+    if(!s.lotesMap[r.lote]) s.lotesMap[r.lote]={lote:r.lote,cajas:0,kg:0,est:0,sem:r.sem,urgente:false,folios:[],fecha:r.fecha};
+    var lt=s.lotesMap[r.lote];
+    lt.cajas+=r.cajas; lt.kg+=r.kg;
+    if(r.est>lt.est) lt.est=r.est;
+    if(r.urgente) lt.urgente=true;
+    if(r.sem==='r') lt.sem='r'; else if(r.sem==='y' && lt.sem!=='r') lt.sem='y';
+    if(r.folio) lt.folios.push(r.folio);
+  });
+  Object.keys(skuMap).forEach(function(mat){
+    skuMap[mat].lotes=Object.keys(skuMap[mat].lotesMap).map(function(lk){return skuMap[mat].lotesMap[lk];})
+      .sort(function(a,b){return b.est-a.est;});
+  });
+  var SEV=function(s){return s.urgente?3:s.sem==='r'?2:s.sem==='y'?1:0;};
+  skuOrder.forEach(function(m){var s=skuMap[m]; s.estMax=s.lotes.length?s.lotes[0].est:0; s.costo=costoDe(m)||0; s.val=s.costo*s.kg;});
+  var SK={mat:function(s){return +s.mat||0;},desc:function(s){return s.desc;},costo:function(s){return s.costo;},val:function(s){return s.val;},cat:function(s){return s.cat;},
+    cajas:function(s){return s.cajas;},kg:function(s){return s.kg;},lotes:function(s){return s.lotes.length;},estado:function(s){return SEV(s)*10000+s.estMax;},est:function(s){return s.estMax;}};
+  if(stkSort.k&&SK[stkSort.k]){
+    var fk=SK[stkSort.k];
+    skuOrder.sort(function(a,b){var x=fk(skuMap[a]),y=fk(skuMap[b]);var c=(typeof x==='string')?x.localeCompare(y,'es'):(x-y);return c*stkSort.d||(skuMap[b].kg-skuMap[a].kg);});
+  }
+  var th=function(k,lbl,st,cls){var on=stkSort.k===k;return '<th'+(cls?' class="'+cls+'"':'')+' onclick="stkSortBy(\''+k+'\')" title="Ordenar por '+lbl+'" style="cursor:pointer;user-select:none;white-space:nowrap;'+(st||'')+'">'+lbl+' <span style="font-size:9px;opacity:'+(on?1:.35)+'">'+(on?(stkSort.d>0?'▲':'▼'):'⇅')+'</span></th>';};
+  var sh='<tr style="position:sticky;top:0;z-index:2">'+th('mat','Codigo')+th('desc','Descripcion')
+    +th('costo','Costo $/Kg','text-align:right;display:none','costo-col')+th('val','Valor $','text-align:right;display:none','costo-col')
+    +th('cat','Categoria')+th('cajas','Cajas','text-align:center')+th('kg','Kg','text-align:right')+th('est','Lotes / estadía','text-align:center')+th('estado','Estado','text-align:center')+'</tr>';
+  skuOrder.forEach(function(mat,idx){
+    var s=skuMap[mat];
+    var bg=s.urgente?'#C00000':s.sem==='r'?'#ED7D31':s.sem==='y'?'#FFEB9C':'#E2EFDA';
+    var fc=(s.urgente||s.sem==='r')?'#fff':s.sem==='y'?'#7D6608':'#375623';
+    var lb=s.urgente?'\u26a0 Urgente':s.sem==='r'?'Cr\u00edtico':s.sem==='y'?'Alerta':'OK';
+    var lid='sl'+idx;
+    var kgFmt=Math.round(s.kg).toLocaleString('es-CL');
+    sh+='<tr data-lid="'+lid+'" data-s="'+(s.urgente?'u':s.sem)+'" data-cat="'+s.cat+'" data-cj="'+s.cajas+'" data-kg="'+s.kg+'" data-val="'+((costoDe(s.mat)||0)*s.kg)+'" style="cursor:pointer" onclick="togStockLote(\''+lid+'\')">'
+      +'<td style="font-family:monospace;font-size:11px">'+s.mat+'</td>'
+      +'<td><strong>'+s.desc+'</strong></td>'
+      +'<td class="costo-col" style="display:none;text-align:right;font-size:11px;white-space:nowrap;color:#1F4E79;font-weight:700">'
+        +(costoDe(s.mat)?'$'+costoDe(s.mat).toLocaleString('es-CL'):'\u2014')+'</td>'
+      +'<td class="costo-col" style="display:none;text-align:right;font-size:11px;white-space:nowrap;color:#555">'+(costoDe(s.mat)?'$'+Math.round(costoDe(s.mat)*s.kg).toLocaleString('es-CL'):'\u2014')+'</td>'
+      +'<td style="font-size:11px;color:#666">'+s.cat+'</td>'
+      +'<td style="text-align:center;font-weight:700">'+s.cajas+'</td>'
+      +'<td style="text-align:right;font-weight:700">'+kgFmt+'</td>'
+      +'<td style="text-align:center;font-size:11px;color:#555">'+s.lotes.length+' lote'+(s.lotes.length!==1?'s':'')+' · '+s.estMax+'d<span style="font-size:10px;margin-left:4px;color:#888">▼</span></td>'
+      +'<td style="text-align:center"><span style="background:'+bg+';color:'+fc+';padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600">'+lb+'</span></td></tr>';
+    // detail rows
+    sh+='<tbody id="'+lid+'" style="display:none">';
+    s.lotes.forEach(function(l){
+      var lbg=l.urgente?'#FDECEC':l.sem==='r'?'#FDF0E6':l.sem==='y'?'#FFFDE7':'#F5FFF5';
+      var lfc=l.urgente?'#C00000':l.sem==='r'?'#ED7D31':l.sem==='y'?'#7D6608':'#375623';
+      var lkg=Math.round(l.kg).toLocaleString('es-CL');
+      var foliosTxt='\u2014';
+      if(l.folios.length){
+        var uniq=l.folios.filter(function(f,i){return l.folios.indexOf(f)===i;});
+        foliosTxt=uniq.slice(0,4).join(', ')+(uniq.length>4?' +'+(uniq.length-4)+' m\u00e1s':'');
+      }
+      sh+='<tr style="background:'+lbg+'">'
+        +'<td></td>'
+        +'<td style="font-size:11px;padding-left:24px;color:#444">&#8627; Lote: <strong>'+l.lote+'</strong><br><span style="font-size:9px;color:#888;">Folio caja: '+foliosTxt+'</span></td>'
+        +'<td class="costo-col" style="display:none"></td><td class="costo-col" style="display:none;text-align:right;font-size:10px;color:#888">'+(costoDe(s.mat)?'$'+Math.round(costoDe(s.mat)*l.kg).toLocaleString('es-CL'):'')+'</td>'
+        +'<td></td>'
+        +'<td style="text-align:center;font-size:11px">'+l.cajas+'</td>'
+        +'<td style="text-align:right;font-size:11px">'+lkg+'</td>'
+        +'<td style="text-align:center;font-size:10px;color:'+lfc+';font-weight:700;">'+l.est+'d</td>'
+        +'<td></td></tr>';
+    });
+    sh+='</tbody>';
+  });
+  // Totals footer
+  var totalCajas=0,totalKg=0;
+  skuOrder.forEach(function(mat){var s=skuMap[mat];totalCajas+=s.cajas;totalKg+=s.kg;});
+  var totalVal=0;
+  skuOrder.forEach(function(mat){var s=skuMap[mat]; totalVal+=(costoDe(mat)||0)*s.kg;});
+  sh+='<tr style="background:#1F4E79;color:#fff;font-weight:700;position:sticky;bottom:0;">'
+    +'<td colspan="2" style="padding:8px 10px;font-size:12px;" id="ts-tot-lbl">TOTAL STOCK</td>'
+    +'<td class="costo-col" style="display:none"></td><td class="costo-col" id="ts-tot-val" style="display:none;text-align:right;font-size:11px;padding:8px 6px;">$'+Math.round(totalVal).toLocaleString('es-CL')+'</td>'
+    +'<td></td>'
+    +'<td id="ts-tot-cj" style="text-align:center;font-size:12px;padding:8px 6px;">'+totalCajas.toLocaleString('es-CL')+' cajas</td>'
+    +'<td id="ts-tot-kg" style="text-align:right;font-size:12px;padding:8px 10px;">'+Math.round(totalKg).toLocaleString('es-CL')+' Kg</td>'
+    +'<td colspan="2"></td></tr>';
+  document.getElementById('ts').innerHTML=sh;
+  if(typeof aplicarVisibilidadCosto==='function'){ try{ aplicarVisibilidadCosto(); }catch(e){} }
+}
 function filtStockCat(cat,el){
   stockCatFilt=cat;
   document.querySelectorAll('#fb-stock-cat .fbtn').forEach(function(b){b.classList.remove('on');});
@@ -3531,89 +3633,7 @@ document.addEventListener('DOMContentLoaded',function(){
     stockSearchQ=this.value.toLowerCase();
     applyStockFilters();
   });
-    // ---- Stock: agrupar por SKU, apertura de lotes ----
-  var skuMap={};
-  var skuOrder=[];
-  D.stock.forEach(function(r){
-    if(!skuMap[r.mat]){
-      skuMap[r.mat]={mat:r.mat,desc:r.desc,cat:r.cat,sem:r.sem,urgente:false,cajas:0,kg:0,lotesMap:{}};
-      skuOrder.push(r.mat);
-    }
-    var s=skuMap[r.mat];
-    s.cajas+=r.cajas;
-    s.kg+=r.kg;
-    // sem: worst wins (urgente > r > y > g)
-    if(r.urgente) s.urgente=true;
-    if(r.sem==='r') s.sem='r';
-    else if(r.sem==='y' && s.sem!=='r') s.sem='y';
-    // Consolidar por lote (no caja por caja): sumar cajas/kg, juntar folios
-    if(!s.lotesMap[r.lote]) s.lotesMap[r.lote]={lote:r.lote,cajas:0,kg:0,est:0,sem:r.sem,urgente:false,folios:[],fecha:r.fecha};
-    var lt=s.lotesMap[r.lote];
-    lt.cajas+=r.cajas; lt.kg+=r.kg;
-    if(r.est>lt.est) lt.est=r.est;
-    if(r.urgente) lt.urgente=true;
-    if(r.sem==='r') lt.sem='r'; else if(r.sem==='y' && lt.sem!=='r') lt.sem='y';
-    if(r.folio) lt.folios.push(r.folio);
-  });
-  Object.keys(skuMap).forEach(function(mat){
-    skuMap[mat].lotes=Object.keys(skuMap[mat].lotesMap).map(function(lk){return skuMap[mat].lotesMap[lk];})
-      .sort(function(a,b){return b.est-a.est;});
-  });
-  var sh='<tr style="position:sticky;top:0;z-index:2"><th>Codigo</th><th>Descripcion</th><th class="costo-col" style="text-align:right;display:none">Costo $/Kg</th><th>Categoria</th><th style="text-align:center">Cajas</th><th style="text-align:right">Kg</th><th style="text-align:center">Lotes</th><th style="text-align:center">Estado</th></tr>';
-  skuOrder.forEach(function(mat,idx){
-    var s=skuMap[mat];
-    var bg=s.urgente?'#C00000':s.sem==='r'?'#ED7D31':s.sem==='y'?'#FFEB9C':'#E2EFDA';
-    var fc=(s.urgente||s.sem==='r')?'#fff':s.sem==='y'?'#7D6608':'#375623';
-    var lb=s.urgente?'\u26a0 Urgente':s.sem==='r'?'Cr\u00edtico':s.sem==='y'?'Alerta':'OK';
-    var lid='sl'+idx;
-    var kgFmt=Math.round(s.kg).toLocaleString('es-CL');
-    sh+='<tr data-lid="'+lid+'" data-s="'+(s.urgente?'u':s.sem)+'" data-cat="'+s.cat+'" data-cj="'+s.cajas+'" data-kg="'+s.kg+'" data-val="'+((costoDe(s.mat)||0)*s.kg)+'" style="cursor:pointer" onclick="togStockLote(\''+lid+'\')">'
-      +'<td style="font-family:monospace;font-size:11px">'+s.mat+'</td>'
-      +'<td><strong>'+s.desc+'</strong></td>'
-      +'<td class="costo-col" style="display:none;text-align:right;font-size:11px;white-space:nowrap;color:#1F4E79;font-weight:700">'
-        +(costoDe(s.mat)?'$'+costoDe(s.mat).toLocaleString('es-CL')+'<div style="font-size:9px;color:#888;font-weight:400">$'+Math.round(costoDe(s.mat)*s.kg).toLocaleString('es-CL')+'</div>':'\u2014')+'</td>'
-      +'<td style="font-size:11px;color:#666">'+s.cat+'</td>'
-      +'<td style="text-align:center;font-weight:700">'+s.cajas+'</td>'
-      +'<td style="text-align:right;font-weight:700">'+kgFmt+'</td>'
-      +'<td style="text-align:center;font-size:11px;color:#555">'+s.lotes.length+' lote'+(s.lotes.length!==1?'s':'')+'<span style="font-size:10px;margin-left:4px;color:#888">▼</span></td>'
-      +'<td style="text-align:center"><span style="background:'+bg+';color:'+fc+';padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600">'+lb+'</span></td></tr>';
-    // detail rows
-    sh+='<tbody id="'+lid+'" style="display:none">';
-    s.lotes.forEach(function(l){
-      var lbg=l.urgente?'#FDECEC':l.sem==='r'?'#FDF0E6':l.sem==='y'?'#FFFDE7':'#F5FFF5';
-      var lfc=l.urgente?'#C00000':l.sem==='r'?'#ED7D31':l.sem==='y'?'#7D6608':'#375623';
-      var lkg=Math.round(l.kg).toLocaleString('es-CL');
-      var foliosTxt='\u2014';
-      if(l.folios.length){
-        var uniq=l.folios.filter(function(f,i){return l.folios.indexOf(f)===i;});
-        foliosTxt=uniq.slice(0,4).join(', ')+(uniq.length>4?' +'+(uniq.length-4)+' m\u00e1s':'');
-      }
-      sh+='<tr style="background:'+lbg+'">'
-        +'<td></td>'
-        +'<td style="font-size:11px;padding-left:24px;color:#444">&#8627; Lote: <strong>'+l.lote+'</strong><br><span style="font-size:9px;color:#888;">Folio caja: '+foliosTxt+'</span></td>'
-        +'<td class="costo-col" style="display:none;text-align:right;font-size:10px;color:#888">'+(costoDe(s.mat)?'$'+Math.round(costoDe(s.mat)*l.kg).toLocaleString('es-CL'):'')+'</td>'
-        +'<td></td>'
-        +'<td style="text-align:center;font-size:11px">'+l.cajas+'</td>'
-        +'<td style="text-align:right;font-size:11px">'+lkg+'</td>'
-        +'<td style="text-align:center;font-size:10px;color:'+lfc+';font-weight:700;">'+l.est+'d</td>'
-        +'<td></td></tr>';
-    });
-    sh+='</tbody>';
-  });
-  // Totals footer
-  var totalCajas=0,totalKg=0;
-  skuOrder.forEach(function(mat){var s=skuMap[mat];totalCajas+=s.cajas;totalKg+=s.kg;});
-  var totalVal=0;
-  skuOrder.forEach(function(mat){var s=skuMap[mat]; totalVal+=(costoDe(mat)||0)*s.kg;});
-  sh+='<tr style="background:#1F4E79;color:#fff;font-weight:700;position:sticky;bottom:0;">'
-    +'<td colspan="2" style="padding:8px 10px;font-size:12px;" id="ts-tot-lbl">TOTAL STOCK</td>'
-    +'<td class="costo-col" id="ts-tot-val" style="display:none;text-align:right;font-size:11px;padding:8px 6px;">$'+Math.round(totalVal).toLocaleString('es-CL')+'</td>'
-    +'<td></td>'
-    +'<td id="ts-tot-cj" style="text-align:center;font-size:12px;padding:8px 6px;">'+totalCajas.toLocaleString('es-CL')+' cajas</td>'
-    +'<td id="ts-tot-kg" style="text-align:right;font-size:12px;padding:8px 10px;">'+Math.round(totalKg).toLocaleString('es-CL')+' Kg</td>'
-    +'<td colspan="2"></td></tr>';
-  document.getElementById('ts').innerHTML=sh;
-  if(typeof aplicarVisibilidadCosto==='function'){ try{ aplicarVisibilidadCosto(); }catch(e){} }
+  buildStockTable();
   buildStockCatFilterBtns();
   renderStockTrendBox();
 
