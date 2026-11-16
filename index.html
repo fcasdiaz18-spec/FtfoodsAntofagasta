@@ -919,7 +919,7 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
   <tr><th>#</th><th>RUT</th><th>Cliente</th><th>Vendedor</th><th>Ingreso</th><th>D&iacute;as</th><th>Cierre</th><th>Plazo solicitado</th><th>Monto</th><th>Obs.</th><th>Estado</th><th>Editar</th></tr>
 </table>
 </div></div>
-<div class="page" id="page-ops"><div class="pi"><div class="sec" id="tit-ops">Panel de Operaciones &#8212; 02-09-2026</div><div class="osort" id="ops-sort"><span class="ol1">Ordenar por:</span><button class="osb on" data-k="est" onclick="setOpsSort('est')">&#9200; Estad&#237;a <span class="od"></span></button><button class="osb" data-k="kg" onclick="setOpsSort('kg')">&#9878; Kilos <span class="od"></span></button><button class="osb" data-k="cajas" onclick="setOpsSort('cajas')">&#128230; Cajas <span class="od"></span></button><span class="ohint">Clic de nuevo invierte el orden &middot; aplica al resumen y a todas las tablas</span></div>
+<div class="page" id="page-ops"><div class="pi"><div class="sec" id="tit-ops">Panel de Operaciones &#8212; 02-09-2026</div><div class="osort" id="ops-sort"><span class="ol1">Ordenar por:</span><button class="osb on" data-k="est" onclick="setOpsSort('est')">&#9200; Estad&#237;a <span class="od"></span></button><button class="osb" data-k="kg" onclick="setOpsSort('kg')">&#9878; Kilos <span class="od"></span></button><button class="osb" data-k="cajas" onclick="setOpsSort('cajas')">&#128230; Cajas <span class="od"></span></button><span class="ohint">Clic de nuevo invierte el orden &middot; tambi&#233;n puedes ordenar con clic en el encabezado de cada tabla</span><div id="ops-filt" style="flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:.5px solid #eee;padding-top:6px;margin-top:2px;"></div></div>
 <div class="urg-box" id="urg-box"></div>
 <div class="ops-kpis" id="ok"></div>
 
@@ -953,7 +953,7 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
 <div class="sec" style="margin-top:22px;">Stock Completo &#8212; Todas las categor&#237;as</div>
 <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
   <input class="sb" id="sb-om" placeholder="Buscar producto o categor&#237;a..." style="flex:1;min-width:200px;margin:0">
-  <select id="fl-om" style="padding:7px 10px;border-radius:6px;border:.5px solid #ddd;font-size:12px;" onchange="filterOpsFull()">
+  <select id="fl-om" style="padding:7px 10px;border-radius:6px;border:.5px solid #ddd;font-size:12px;" onchange="setOpsSem(this.value)">
     <option value="">Todos los estados</option>
     <option value="u">Solo urgente</option>
     <option value="r">Solo cr&#237;tico</option>
@@ -3235,17 +3235,50 @@ function buildCatTable(data){
 
 
 function filterOpsFull(){
-  var q=(document.getElementById('sb-om')||{}).value||'';
-  q=q.toLowerCase();
-  var sem=(document.getElementById('fl-om')||{}).value||'';
-  document.querySelectorAll('#tom tr.grp-row').forEach(function(r){
-    var okText=!q||r.textContent.toLowerCase().includes(q);
-    var okSem=!sem||r.getAttribute('data-sem')===sem;
-    r.style.display=(okText&&okSem)?'':'none';
+  var sel=document.getElementById('fl-om');
+  if(sel && sel.value!==opsSem && document.activeElement===sel){ opsSem=sel.value; }
+  applyOpsFilt();
+}
+var opsSem='';
+var OPS_FL=[['','&#128203; Todo','#444'],['u','&#9888; Urgente','#C00000'],['r','&#128308; Cr&#237;tico','#ED7D31'],['y','&#128993; Alerta','#7D6608'],['g','&#128994; OK','#375623'],['p','&#9203; Por gestionar','#7030A0']];
+function opsSemOf(g){return g.urgente?'u':g.sem;}
+function opsPend(g){var s=opsSemOf(g);return (s==='u'||s==='r') && (typeof urgSt!=='function'||urgSt(g.mat)==='pend');}
+function setOpsSem(v){ opsSem=v; var sel=document.getElementById('fl-om'); if(sel) sel.value=(v==='p'?'':v); if(v==='u'||v==='r'||v==='p'){ urgView='crit'; } applyOpsFilt(); if(typeof renderUrg==='function') renderUrg(); }
+function limpiarOps(){
+  opsSem=''; ['sb-ov','sb-oz','sb-om'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});
+  var sel=document.getElementById('fl-om'); if(sel) sel.value='';
+  opsSort={k:'est',dir:-1}; renderOpsTables(); if(typeof renderUrg==='function') renderUrg();
+}
+function paintOpsFilt(){
+  var box=document.getElementById('ops-filt'); if(!box) return;
+  var all=D.stock_full||[], n={'':all.length,u:0,r:0,y:0,g:0,p:0};
+  all.forEach(function(g){n[opsSemOf(g)]=(n[opsSemOf(g)]||0)+1; if(opsPend(g)) n.p++;});
+  box.innerHTML='<span class="ol1">Filtrar:</span>'+OPS_FL.map(function(f){
+    var on=opsSem===f[0];
+    return '<button class="osb'+(on?' on':'')+'" onclick="setOpsSem(\''+f[0]+'\')" style="'+(on?'':'color:'+f[2]+';')+'">'+f[1]+' <b style="opacity:.8">'+n[f[0]]+'</b></button>';
+  }).join('')+'<button class="osb" onclick="limpiarOps()" title="Quitar filtros, b&#250;squedas y orden" style="border-style:dashed;color:#555;">&#8634; Limpiar</button>';
+}
+function applyOpsFilt(){
+  var byMat={}; (D.stock_full||[]).forEach(function(g){byMat[String(g.mat)]=g;});
+  [['tov','sb-ov'],['toz','sb-oz'],['tom','sb-om']].forEach(function(t){
+    var q=((document.getElementById(t[1])||{}).value||'').toLowerCase(), vis=0, tot=0;
+    document.querySelectorAll('#'+t[0]+' tr.grp-row').forEach(function(r){
+      tot++;
+      var sem=r.getAttribute('data-sem'), g=byMat[r.querySelector('td').textContent.trim()]||{};
+      var okS=!opsSem||(opsSem==='p'?opsPend(g):sem===opsSem);
+      var ok=okS&&(!q||r.textContent.toLowerCase().includes(q));
+      r.style.display=ok?'':'none'; if(ok) vis++;
+      if(!ok){ document.querySelectorAll('.det-'+r.getAttribute('data-gid')+'.on').forEach(function(d){d.classList.remove('on');}); var a=r.querySelector('.arr'); if(a) a.textContent='\u25BC'; }
+    });
+    var tb=document.getElementById(t[0]), c=document.getElementById(t[0]+'-cnt');
+    if(tb && !c){ c=document.createElement('div'); c.id=t[0]+'-cnt'; c.style.cssText='font-size:10px;color:#888;margin-top:4px;'; tb.parentNode.insertBefore(c,tb.nextSibling); }
+    if(c) c.textContent=(vis===tot?tot+' productos':vis+' de '+tot+' productos con el filtro actual');
   });
+  paintOpsFilt();
 }
 function buildOpsTbl(data,tableId){
-  var h='<tr><th>Codigo</th><th>Producto</th><th>Cat.</th><th style="text-align:center">Cajas</th><th style="text-align:right">Kg</th><th style="text-align:center">Estadia</th><th style="text-align:center">v</th></tr>';
+  var th=function(k,l,al){var on=opsSort.k===k;return '<th onclick="setOpsSort(\''+k+'\')" title="Ordenar" style="cursor:pointer;white-space:nowrap;'+(al?'text-align:'+al+';':'')+(on?'text-decoration:underline;':'')+'">'+l+(on?(opsSort.dir<0?' \u25BC':' \u25B2'):' <span style="opacity:.35">\u21C5</span>')+'</th>';};
+  var h='<tr>'+th('mat','Codigo')+th('desc','Producto')+th('cat','Cat.')+th('cajas','Cajas','center')+th('kg','Kg','right')+th('est','Estadia','center')+'<th style="text-align:center">v</th></tr>';
   data.forEach(function(g,i){
     var est=g.est_max;
     var bg = g.urgente?'#C00000':g.sem==='r'?'#ED7D31':g.sem==='y'?'#FFEB9C':'#E2EFDA';
@@ -3934,14 +3967,8 @@ function irRec(lbl,av,mtxt,extra,pct,vn2){
   // Ops KPIs (se construyen realmente en buildOpsCharts() al abrir la pestana Ops)
 
   // Ops buscadores
-  document.getElementById('sb-ov').addEventListener('input',function(){
-    var q=this.value.toLowerCase();
-    document.querySelectorAll('#tov tr.grp-row').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';});
-  });
-  document.getElementById('sb-oz').addEventListener('input',function(){
-    var q=this.value.toLowerCase();
-    document.querySelectorAll('#toz tr.grp-row').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';});
-  });
+  document.getElementById('sb-ov').addEventListener('input',applyOpsFilt);
+  document.getElementById('sb-oz').addEventListener('input',applyOpsFilt);
   document.getElementById('sb-om').addEventListener('input',function(){
     filterOpsFull();
   });
@@ -4142,16 +4169,16 @@ function opsTipo(mat,cat){
   if(!opsTipo._m){opsTipo._m={};((D.supply&&D.supply.prod)||[]).forEach(function(p){opsTipo._m[p.mat]=p.tipo;});}
   return opsTipo._m[mat]||(OPS_VC[cat]?'VACIO':'CONGELADO');
 }
-function opsKey(g){return opsSort.k==='kg'?g.total_kg:opsSort.k==='cajas'?g.total_cajas:g.est_max;}
+function opsKey(g){var k=opsSort.k;return k==='kg'?g.total_kg:k==='cajas'?g.total_cajas:k==='mat'?String(g.mat):k==='desc'?String(g.desc):k==='cat'?String(g.cat):g.est_max;}
 function opsSorted(arr){
-  return arr.slice().sort(function(a,b){var d=(opsKey(a)-opsKey(b))*opsSort.dir;return d||(b.est_max-a.est_max)||(b.total_kg-a.total_kg);});
+  return arr.slice().sort(function(a,b){var x=opsKey(a),y=opsKey(b);var d=(typeof x==='string'?x.localeCompare(y,'es',{numeric:true}):(x-y))*opsSort.dir;return d||(b.est_max-a.est_max)||(b.total_kg-a.total_kg);});
 }
 function setOpsSort(k){
-  if(opsSort.k===k) opsSort.dir*=-1; else {opsSort.k=k;opsSort.dir=-1;}
+  if(opsSort.k===k) opsSort.dir*=-1; else {opsSort.k=k;opsSort.dir=(k==='mat'||k==='desc'||k==='cat')?1:-1;}
   renderOpsTables(); renderUrg();
 }
 function paintSortBar(){
-  document.querySelectorAll('#ops-sort .osb').forEach(function(b){
+  document.querySelectorAll('#ops-sort .osb[data-k]').forEach(function(b){
     var on=b.getAttribute('data-k')===opsSort.k;
     b.classList.toggle('on',on);
     b.querySelector('.od').textContent=on?(opsSort.dir<0?'↓':'↑'):'';
@@ -4163,8 +4190,7 @@ function renderOpsTables(){
   buildOpsTbl(opsSorted(v),'tov');
   buildOpsTbl(opsSorted(z),'toz');
   buildOpsTbl(opsSorted(D.stock_full),'tom');
-  ['sb-ov','sb-oz'].forEach(function(id){var e=document.getElementById(id);if(e&&e.value)e.dispatchEvent(new Event('input'));});
-  filterOpsFull();
+  applyOpsFilt();
   paintSortBar();
 }
 // lotes criticos (ahora) o que entran a critico en <=7 dias
@@ -4204,6 +4230,7 @@ function renderUrg(){
   var pct=crit.length?Math.round(res/crit.length*100):100;
   var list=all.filter(function(x){var s=urgSt(x.mat);
     return urgFilt==='todos'||(urgFilt==='pend'&&s==='pend')||(urgFilt==='curso'&&(s==='gest'||s==='ofer'))||(urgFilt==='res'&&URG_RES[s]);});
+  if(urgView==='crit' && (opsSem==='u'||opsSem==='r'||opsSem==='p')) list=list.filter(function(x){return opsSem==='u'?x.urg:opsSem==='r'?!x.urg:urgSt(x.mat)==='pend';});
   var fb=function(k,l,n){return '<button class="fbtn'+(urgFilt===k?' on':'')+'" onclick="urgFilt=\''+k+'\';renderUrg()">'+l+(n!=null?' ('+n+')':'')+'</button>';};
   var cnt=function(f){return all.filter(function(x){var s=urgSt(x.mat);return f(s);}).length;};
   var h='<div class="urg-hd"><div><div class="urg-tt">&#128680; Resumen de gestión urgente</div>'
@@ -4273,6 +4300,7 @@ function pushGest(mat,patch,silent){
   if(patch.asig){g.asig=Object.assign({},old.asig||{});Object.keys(patch.asig).forEach(function(v){g.asig[v]=patch.asig[v];});}
   opsGest[mat]=g;
   try{localStorage.setItem('ftopsgest',JSON.stringify(opsGest));}catch(e){}
+  if(opsSem==='p'||document.getElementById('ops-filt')) setTimeout(applyOpsFilt,0);
   if(!fsDB){ if(!silent) alert('Sin conexión a la base de datos: el cambio quedó solo en este equipo.'); return; }
   var o={}; o[mat]=patch;
   fsDB.collection('panel').doc('ops_gestion').set({items:o,updated:Date.now()},{merge:true})
