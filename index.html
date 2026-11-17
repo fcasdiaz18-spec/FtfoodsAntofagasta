@@ -1901,6 +1901,10 @@ function aplicarVisibilidadHistGraf(){
   if(ver && typeof renderHistGraf==='function'){ try{ renderHistGraf(); }catch(e){} }
 }
 
+function lotePrecio(mat){
+  if(!lotePrecio._m){lotePrecio._m={};(D.precios||[]).forEach(function(p){lotePrecio._m[String(p.mat)]={a:p.precio_a||0,v:p.precio_vol||0};});}
+  return lotePrecio._m[String(mat)]||null;
+}
 function costoDe(mat){ try{ return (D.costos&&D.costos[String(mat)])||0; }catch(e){ return 0; } }
 function aplicarVisibilidadCosto(){
   var ver = (typeof isAdmin!=='undefined') && isAdmin;
@@ -2349,9 +2353,10 @@ function buildStockTable(){
     if(r.sem==='r') s.sem='r';
     else if(r.sem==='y' && s.sem!=='r') s.sem='y';
     // Consolidar por lote (no caja por caja): sumar cajas/kg, juntar folios
-    if(!s.lotesMap[r.lote]) s.lotesMap[r.lote]={lote:r.lote,cajas:0,kg:0,est:0,sem:r.sem,urgente:false,folios:[],fecha:r.fecha};
+    if(!s.lotesMap[r.lote]) s.lotesMap[r.lote]={lote:r.lote,cajas:0,kg:0,est:0,sem:r.sem,urgente:false,folios:[],fecha:r.fecha,cv:0,ckg:0};
     var lt=s.lotesMap[r.lote];
     lt.cajas+=r.cajas; lt.kg+=r.kg;
+    if(r.cu>0){lt.cv+=r.cu*r.kg; lt.ckg+=r.kg;}
     if(r.est>lt.est) lt.est=r.est;
     if(r.urgente) lt.urgente=true;
     if(r.sem==='r') lt.sem='r'; else if(r.sem==='y' && lt.sem!=='r') lt.sem='y';
@@ -2405,7 +2410,15 @@ function buildStockTable(){
       sh+='<tr style="background:'+lbg+'">'
         +'<td></td>'
         +'<td style="font-size:11px;padding-left:24px;color:#444">&#8627; Lote: <strong>'+l.lote+'</strong><br><span style="font-size:9px;color:#888;">Folio caja: '+foliosTxt+'</span></td>'
-        +'<td class="costo-col" style="display:none"></td><td class="costo-col" style="display:none;text-align:right;font-size:10px;color:#888">'+(costoDe(s.mat)?'$'+Math.round(costoDe(s.mat)*l.kg).toLocaleString('es-CL'):'')+'</td>'
+        +(function(){var cm=costoDe(s.mat)||0, real=l.ckg>0, cu=real?Math.round(l.cv/l.ckg):cm;
+            if(!cu) return '<td class="costo-col" style="display:none;text-align:right;font-size:10px;color:#888">\u2014</td><td class="costo-col" style="display:none"></td>';
+            var pr=lotePrecio(s.mat), mg=function(pv){return pv?Math.round((pv-cu)/pv*1000)/10:null;}, ma=pr?mg(pr.a):null, mv=pr?mg(pr.v):null;
+            var mc=function(m){return m==null?'#888':m<0?'#C00000':m<8?'#ED7D31':'#375623';};
+            var dif=(real&&cm)?Math.round((cu-cm)/cm*1000)/10:null;
+            return '<td class="costo-col" style="display:none;text-align:right;font-size:11px;white-space:nowrap;color:#1F4E79;font-weight:700" title="'+(real?'Costo real del lote (SAP)':'Costo promedio del material (sin costo por lote en este stock)')+'">'+(real?'':'\u2248')+'$'+cu.toLocaleString('es-CL')+'/kg'
+              +(dif!=null&&Math.abs(dif)>=0.5?'<br><span style="font-size:9px;font-weight:600;color:'+(dif>0?'#C00000':'#375623')+'">'+(dif>0?'+':'')+dif.toLocaleString('es-CL')+'% vs prom.</span>':'')
+              +(pr?'<br><span style="font-size:9px;font-weight:600;white-space:nowrap"><span style="color:'+mc(ma)+'">A '+(ma==null?'\u2014':ma.toLocaleString('es-CL')+'%')+'</span> \u00b7 <span style="color:'+mc(mv)+'">Vol '+(mv==null?'\u2014':mv.toLocaleString('es-CL')+'%')+'</span></span>':'')+'</td>'
+              +'<td class="costo-col" style="display:none;text-align:right;font-size:10px;color:#888">$'+Math.round(cu*l.kg).toLocaleString('es-CL')+'</td>';})()
         +'<td></td>'
         +'<td style="text-align:center;font-size:11px">'+l.cajas+'</td>'
         +'<td style="text-align:right;font-size:11px">'+lkg+'</td>'
