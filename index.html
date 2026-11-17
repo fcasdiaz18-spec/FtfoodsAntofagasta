@@ -3293,7 +3293,7 @@ function buildOpsTbl(data,tableId){
       +'<td style="text-align:right">'+g.total_kg.toLocaleString('es-CL')+' Kg</td>'
       +'<td style="text-align:center"><span style="background:'+bg+';color:'+fc+';padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">'+est+'d'+lb+'</span></td>'
       +'<td style="text-align:center;color:#888;font-size:12px"><span class="arr">\u25BC</span></td></tr>';
-    g.cajas_det.forEach(function(c){
+    g.cajas_det.slice().sort(function(a,b){return (b.est-a.est)||String(a.folio).localeCompare(String(b.folio),'es',{numeric:true});}).forEach(function(c){
       h+='<tr class="det-row det-'+gid+'">'
         +'<td colspan="2" style="font-size:10px;padding-left:24px;color:#555">Lote: '+c.lote+' / Folio: '+c.folio+'</td>'
         +'<td></td>'
@@ -4206,7 +4206,8 @@ function urgItems(view){
     L=L.slice().sort(function(a,b){return b.est-a.est;});
     var cj=0,kg=0,em=0;L.forEach(function(c){cj+=c.cajas;kg+=c.kg;em=Math.max(em,c.est);});
     out.push({mat:g.mat,desc:g.desc,cat:g.cat,tipo:t,lim:lim,lotes:L,total_cajas:cj,total_kg:Math.round(kg*10)/10,est_max:em,
-      urg:L.some(function(c){return c.urgente;}),stock_kg:g.total_kg,stock_cj:g.total_cajas});
+      urg:L.some(function(c){return c.urgente;}),stock_kg:g.total_kg,stock_cj:g.total_cajas,
+      folios:g.cajas_det.slice().sort(function(a,b){return (b.est-a.est)||String(a.folio).localeCompare(String(b.folio),'es',{numeric:true});})});
   });
   return opsSorted(out);
 }
@@ -4260,8 +4261,8 @@ function renderUrg(){
     h+='<div class="uc s-'+st+'"><div class="uc-h"><div><div class="uc-n">'+escH(nomCorto(x.desc))+'</div><div class="uc-m">'+x.mat+' &middot; '+escH(x.cat)+' &middot; '+(x.tipo==='VACIO'?'Vacío':'Congelado')+'</div></div>'
       +'<div class="uc-e'+(urgView==='prox'?' pr':'')+'">'+x.est_max+'d'+(x.urg?' ⚠':'')+'</div></div>'
       +'<div class="uc-q">'+ftN(x.total_cajas)+' cjs &middot; '+ftN(x.total_kg,1)+' kg <small>'+(urgView==='prox'?'(rojo en '+Math.max(falta,0)+' d) ':'')+'de '+ftN(x.stock_kg,0)+' kg</small></div>'
-      +'<details class="uc-d"><summary>'+Object.keys(nl).length+' lote'+(Object.keys(nl).length===1?'':'s')+' &middot; compradores</summary>'
-      +'<table class="uc-l">'+x.lotes.map(function(c){return '<tr><td><b>'+escH(c.lote)+'</b>'+(c.fecha?' <span style="color:#999">'+escH(c.fecha)+'</span>':'')+'</td><td style="text-align:right">'+c.cajas+' cjs</td><td style="text-align:right">'+ftN(c.kg,1)+' kg</td><td style="text-align:right;font-weight:700;color:'+(c.urgente?'#C00000':'#ED7D31')+'">'+c.est+'d</td></tr>';}).join('')+'</table>'
+      +'<details class="uc-d"><summary>'+x.folios.length+' folio'+(x.folios.length===1?'':'s')+' &middot; '+Object.keys(nl).length+' lote'+(Object.keys(nl).length===1?'':'s')+' cr&iacute;tico'+(Object.keys(nl).length===1?'':'s')+' &middot; compradores</summary>'
+      +'<table class="uc-l"><tr style="color:#888;font-size:10px"><td>Folio / Lote</td><td style="text-align:right">Cajas</td><td style="text-align:right">Kg</td><td style="text-align:right">Estad&iacute;a</td></tr>'+x.folios.map(function(c){var col=c.urgente?'#C00000':c.sem==='r'?'#ED7D31':c.sem==='y'?'#B8860B':'#375623';return '<tr><td><b>'+escH(c.folio||'s/folio')+'</b> <span style="color:#666">'+escH(c.lote)+'</span>'+(c.fecha?' <span style="color:#999">'+escH(c.fecha)+'</span>':'')+'</td><td style="text-align:right">'+c.cajas+' cjs</td><td style="text-align:right">'+ftN(c.kg,1)+' kg</td><td style="text-align:right;font-weight:700;color:'+col+'">'+c.est+'d'+(c.urgente?' \u26a0':'')+'</td></tr>';}).join('')+'</table>'
       +urgCompHTML(x.mat,null,5,true)+'</details>'
       +'<div class="uc-v">'+chips+'</div>'
       +'<div class="uc-f2"><select onchange="saveGest(\''+x.mat+'\',\'st\',this.value)">'+URG_ST.map(function(o){return '<option value="'+o[0]+'"'+(st===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>'
