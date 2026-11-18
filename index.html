@@ -3895,6 +3895,36 @@ function irDet(lbl,av,mtxt,extra,pct,icon,detArr){
         +'<div id="'+rid+'" class="cc" style="margin-bottom:6px;" onclick="event.stopPropagation()">'
         +'<div style="font-size:9px;color:#888;padding:3px 0;font-weight:700;">Detalle por cliente:</div>'+listHtml+'</div></div>';
     }
+function focoMolData(vn){
+  var pc=(D.prod_cat&&D.prod_cat[vn])||{}, L=[];
+  Object.keys(pc).forEach(function(c){(pc[c]||[]).forEach(function(p){ if(/MOLID/i.test(p.prod||'')) L.push(p); });});
+  L.sort(function(a,b){return b.kg-a.kg;});
+  var kg=0,nt=0,mg=0; L.forEach(function(p){kg+=p.kg||0; nt+=p.neto||0; mg+=(p.neto||0)*(p.mg||0)/100;});
+  return {L:L,kg:kg,nt:nt,mgp:nt?mg/nt*100:0};
+}
+function focoMolHtml(vn){
+  var f=focoMolData(vn), fmt=function(v,d){return v.toLocaleString('es-CL',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});};
+  var mc=function(m){return m<0?'#C00000':m<8?'#ED7D31':'#375623';};
+  var rows=f.L.length?f.L.map(function(p){
+      return '<tr><td style="padding:4px 6px;color:#666">'+p.cod+'</td><td style="padding:4px 6px">'+p.prod+'</td>'
+        +'<td style="padding:4px 6px;text-align:right;font-weight:600">'+fmt(p.kg,1)+' kg</td>'
+        +'<td style="padding:4px 6px;text-align:right">'+(f.kg?fmt(p.kg/f.kg*100,1)+'%':'')+'</td>'
+        +'<td style="padding:4px 6px;text-align:right;font-weight:700;color:'+mc(p.mg)+'">'+fmt(p.mg,1)+'%</td></tr>';
+    }).join('')
+    +'<tr style="border-top:1px solid #e5e5e5;font-weight:700"><td></td><td style="padding:4px 6px">Total molidas</td><td style="padding:4px 6px;text-align:right">'+fmt(f.kg,1)+' kg</td><td></td><td style="padding:4px 6px;text-align:right;color:'+mc(f.mgp)+'">'+fmt(f.mgp,1)+'%</td></tr>'
+    :'<tr><td colspan="5" style="padding:8px;color:#999;text-align:center">Sin venta de molidas este mes</td></tr>';
+  return '<details class="foco-mol" onclick="event.stopPropagation()" style="margin-top:12px;border:1.5px solid #ED7D31;border-radius:8px;background:#FFF8F1;overflow:hidden">'
+    +'<summary style="cursor:pointer;list-style:none;padding:9px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+    +'<span style="font-size:16px">\u{1F3AF}</span>'
+    +'<span style="font-size:12px;font-weight:800;color:#C55A11;letter-spacing:.3px">FOCO CONCURSO MOLIDAS</span>'
+    +'<span style="font-size:9px;background:#fff;border:1px solid #ED7D31;color:#C55A11;padding:1px 6px;border-radius:4px">No es parte del bono</span>'
+    +'<span style="margin-left:auto;font-size:13px;font-weight:800;color:#1F4E79">'+fmt(f.kg,1)+' kg</span>'
+    +'<span style="font-size:11px;font-weight:700;color:'+mc(f.mgp)+'">Mg '+fmt(f.mgp,1)+'%</span>'
+    +'<span style="font-size:10px;color:#888">'+f.L.length+' SKU ▾</span></summary>'
+    +'<div style="padding:0 10px 10px"><table style="width:100%;border-collapse:collapse;font-size:11px;background:#fff;border-radius:6px">'
+    +'<tr style="color:#888;font-size:10px;border-bottom:1px solid #eee"><td style="padding:4px 6px">SKU</td><td style="padding:4px 6px">Producto</td><td style="padding:4px 6px;text-align:right">Kilos</td><td style="padding:4px 6px;text-align:right">% mix</td><td style="padding:4px 6px;text-align:right">Margen %</td></tr>'
+    +rows+'</table><div style="font-size:9px;color:#999;margin-top:4px">Incluye todo SKU de carne molida (cualquier marca/formato). Avance mes al '+((D.kpis&&D.kpis.fecha)||'')+'.</div></div></details>';
+}
 function irRec(lbl,av,mtxt,extra,pct,vn2){
       var rid='rec-'+vn2.replace(/[^a-zA-Z0-9]/g,'');
       var recArr=(D.bono.rec[vn2]&&D.bono.rec[vn2].clientes)||[];
@@ -3965,6 +3995,7 @@ function irRec(lbl,av,mtxt,extra,pct,vn2){
       if(mt.rec!=null){ var pr3=Math.round(rec/mt.rec*100);
         bn+=irRec('Clientes recuperados',rec+' '+plCli(rec),mt.rec+' '+plCli(mt.rec),'Sin venta Jul ni Ago, activos Sep',pr3,vn); }
     }
+    bn+=focoMolHtml(vn);
     bn+='</div>';
   });
   if(D.bono && D.bono.pendiente){
