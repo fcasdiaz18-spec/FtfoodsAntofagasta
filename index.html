@@ -2894,6 +2894,22 @@ function togDiv(gid){
     r.style.display=(r.style.display==='none')?'block':'none';
   });
 }
+// Liquidaciones no informadas al vendedor: no se consideran en su resumen (insights, reporte semanal)
+var LIQ_NO_INF={'Aníbal Marín':{skus:['71232'],mgMin:6}}; // 71232 Lomo liso porcionado A Punto + todo producto bajo margen
+function liqNoInf(vend,cod,mg){var r=LIQ_NO_INF[vend]; return !!r&&(r.skus.indexOf(String(cod))!==-1||(mg!=null&&mg<r.mgMin));}
+function repFiltLiq(R,v){
+  if(!R||!R.ojo) return R;
+  var o=R.ojo.filter(function(p){return !liqNoInf(p.vend||v,p.cod,p.mgp);});
+  if(o.length===R.ojo.length) return R;
+  var X={}; for(var k in R) X[k]=R[k];
+  X.ojo=o;
+  X.ins=(R.ins||[]).map(function(i){
+    if(!/con margen bajo/.test(i.m||'')) return i;
+    if(!o.length) return null;
+    return {t:i.t,m:i.m.replace(/^\d+ productos? vendidos? /,o.length+' producto'+(o.length>1?'s':'')+' vendido'+(o.length>1?'s':'')+' ')};
+  }).filter(Boolean);
+  return X;
+}
 function buildLiquidacionesAlert(filtroVend){
   var UMBRAL=-10; // margen % considerado liquidacion/muy negativo
   var neg=[];
@@ -2901,6 +2917,7 @@ function buildLiquidacionesAlert(filtroVend){
     if(filtroVend && cl.vend!==filtroVend) return;
     (cl.productos||[]).forEach(function(p){
       if(p.liq&&!isAdmin) return;
+      if(liqNoInf(cl.vend,p.cod,p.mg)) return;
       if(p.mg<=UMBRAL){
         neg.push({vend:cl.vend,cli:cl.cli,cod_cli:cl.cod_cli,cod:p.cod,prod:p.prod,fact:p.fact,mg:p.mg});
       }
@@ -2971,7 +2988,7 @@ function renderResumenInsights(content,esperadoPct,avgMargen,VENDS_INSIGHT){
     var liqCount=0, liqFact=0;
     (D.clientes||[]).forEach(function(cl){
       if(cl.vend!==v.nombre) return;
-      (cl.productos||[]).forEach(function(p){ if(p.liq&&!isAdmin) return; if(p.mg<=-10){ liqCount++; liqFact+=p.fact; } });
+      (cl.productos||[]).forEach(function(p){ if(p.liq&&!isAdmin) return; if(liqNoInf(cl.vend,p.cod,p.mg)) return; if(p.mg<=-10){ liqCount++; liqFact+=p.fact; } });
     });
     if(liqCount){
       candNeg.push({peso:3,icon:'\u{1F6A8}',txt:liqCount+' producto(s) con margen muy negativo por $'+liqFact.toFixed(2)+'M.'});
@@ -4707,7 +4724,7 @@ function repPts(a,b){
 function repMgc(m){return m<6?'#C62828':m<12?'#B26A00':'#2E7D32';}
 function repHTML(v){
   if(typeof REP_SEM==='undefined'||!REP_SEM.rep[v]) return '<div style="padding:20px;color:#888">Sin reporte.</div>';
-  var R=REP_SEM.rep[v], s=R.sem, a=R.ant, m=R.mes, st=repSt(v), todos=(v==='Todos');
+  var R=repFiltLiq(REP_SEM.rep[v],v), s=R.sem, a=R.ant, m=R.mes, st=repSt(v), todos=(v==='Todos');
   var nombre=todos?'Felipe':v.split(' ')[0];
   var h='<div class="rp">';
   h+='<div class="rp-hero"><div class="rp-k">REPORTE SEMANAL &middot; '+repE(REP_SEM.titulo.toUpperCase())+'</div>'
@@ -4839,7 +4856,7 @@ function renderReportes(){
     +'<button class="rp-btn ok" onclick="repAprobarTodos()">✔ Aprobar y publicar todos</button></div>'
     +'<div class="ra-info">Revisa cada reporte (Ver), agrega un mensaje si quieres y dale <b>✔ Aprobar</b>. Recién ahí el vendedor lo ve al iniciar sesión. Mientras no lo marque como leído, le aparece cada vez que entra.</div><div class="ra-g">';
   all.forEach(function(v,i){
-    var st=repSt(v), R=REP_SEM.rep[v];
+    var st=repSt(v), R=repFiltLiq(REP_SEM.rep[v],v);
     var est=st.leido?'<span class="ra-b l">&#128065; Leído '+fmtTs(st.leido_ts)+'</span>':st.ok?'<span class="ra-b o">✔ Publicado '+fmtTs(st.ok_ts)+'</span>':'<span class="ra-b p">⏳ Pendiente de revisión</span>';
     var em=(repState.cfg&&repState.cfg.emails&&repState.cfg.emails[v])||'';
     h+='<div class="ra-c'+(st.ok?' ok':'')+'"><div class="ra-ch"><b>'+(v==='Todos'?'&#11088; Felipe (consolidado)':repE(v))+'</b>'+est+'</div>'
