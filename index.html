@@ -545,7 +545,7 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
   <div id="dg5-meta" style="font-size:8px;color:#555;text-align:center;"></div>
   <div id="dg5-proy" style="font-size:8px;color:#375623;font-weight:600;text-align:center;"></div>
 </div>
-</div></div><div class="g2"><div><div class="sec">Focos del mes</div>
+</div></div><div id="proy-adm-box" style="display:none;margin:10px 0 4px;"></div><div class="g2"><div><div class="sec">Focos del mes</div>
 <div id="foco-inicio-box" style="background:linear-gradient(135deg,#9C1C1C 0%,#6B0F0F 100%);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px;">
 </div><div class="al ar" id="ro-alert"><div style="font-size:18px;flex-shrink:0;">&#128680;</div><div><div class="at">Resultado operacional cr&#237;tico</div><div class="ad" id="ro-txt"></div></div></div><div class="al" style="background:#F3F0FA;border-left:4px solid #7030A0;cursor:pointer;" onclick="go('stock',document.querySelectorAll('.tab')[5])"><div style="font-size:18px;flex-shrink:0;">&#128230;</div><div style="flex:1"><div class="at" style="color:#4A2E6B;">Gesti&#243;n de Inventario &#8594;</div><div class="ad">Sin venta, estad&#237;a cr&#237;tica y productos urgentes de liquidar. Ver detalle completo.</div></div></div><div class="al aa"><div style="font-size:18px;flex-shrink:0;">&#128230;</div><div><div class="at" id="t3-txt"></div><div class="ad">Vacuno Importado concentra el mayor riesgo.</div></div></div><div class="al ag"><div style="font-size:18px;flex-shrink:0;">&#9989;</div><div><div class="at" id="mg-txt"></div><div class="ad">Carolina Aracena y Anibal Marin lideran el margen.</div></div></div></div><div><div class="sec">Facturacion por vendedor</div><div class="card"><canvas id="c1" height="200"></canvas></div></div></div></div>
 <!-- TOP 10 CLIENTES Y PRODUCTOS -->
@@ -692,7 +692,7 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
 </div>
 
 </div></div>
-<div class="page" id="page-metas"><div class="pi"><div class="sec" id="tit-metas">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl" id="lbl-dias-rest">Dias restantes</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
+<div class="page" id="page-metas"><div class="pi"><div class="sec" id="tit-metas">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div id="proy-adm-box2" style="display:none;margin:12px 0;"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl" id="lbl-dias-rest">Dias restantes</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
 <div class="page" id="page-vendedores"><div class="pi"><div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">Desempeno individual &#8212; Clic en fila para ver detalle <span id="vend-total-clientes-badge" style="font-size:11px;font-weight:700;background:#EFF4FF;color:#1F4E79;padding:4px 10px;border-radius:12px;"></span></div><div class="vend-grid"><div style="max-height:420px;overflow-y:auto;border-radius:8px;"><table id="tv"></table></div><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div>
 
 <div id="seg-gest"></div><div id="vcs"></div></div></div>
@@ -1934,7 +1934,33 @@ function actualizarTitulosMes(){
   var t5=document.getElementById('stock-title');
   if(t5 && String(t5.innerHTML).indexOf('transito')===-1) t5.innerHTML='Stock disponible &#8212; '+fechaStock();
 }
+function renderProyAdm(){
+  var ids=['proy-adm-box','proy-adm-box2'];
+  if(!isAdmin){ ids.forEach(function(i){var e=document.getElementById(i); if(e){e.style.display='none'; e.innerHTML='';}}); return; }
+  var k=D.kpis;
+  var fm=function(v){return Number(v).toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1});};
+  var rows=[
+    {l:'Facturación',ic:'\u{1F4B5}',proy:k.proy_f,meta:k.meta_fact},
+    {l:'Margen bruto',ic:'\u{1F4B0}',proy:k.proy_m,meta:k.meta_mg},
+    {l:'Resultado Op. (ROP)',ic:'⚖️',proy:k.proy_ro,meta:k.meta_ro}
+  ];
+  var cards=rows.map(function(r){
+    var pct=r.meta?r.proy/r.meta*100:0, sob=pct-100, dif=r.proy-r.meta;
+    var ok=sob>=0, col=ok?'#2E7D32':'#C62828';
+    return '<div style="flex:1;min-width:180px;background:#fff;border-radius:10px;padding:10px 12px;border:.5px solid #e6e6e6;border-left:5px solid '+col+';">'
+      +'<div style="font-size:10.5px;font-weight:800;color:#444;text-transform:uppercase;letter-spacing:.4px;">'+r.ic+' '+r.l+'</div>'
+      +'<div style="display:flex;align-items:baseline;gap:8px;margin-top:4px;"><span style="font-size:24px;font-weight:800;color:'+col+';">'+fm(pct)+'%</span>'
+      +'<span style="font-size:12px;font-weight:700;color:'+col+';">'+(ok?'▲ +':'▼ ')+fm(sob)+'% '+(ok?'sobrecumplimiento':'bajo meta')+'</span></div>'
+      +'<div style="font-size:11px;color:#666;margin-top:3px;">Proy. cierre $'+fm(r.proy)+'M vs meta $'+fm(r.meta)+'M · <b style="color:'+col+'">'+(dif>=0?'+':'−')+'$'+fm(Math.abs(dif))+'M</b></div>'
+      +'</div>';
+  }).join('');
+  var html='<div style="background:#F3F7F0;border:1px solid #C8E6C9;border-radius:12px;padding:10px 12px;">'
+    +'<div style="font-size:12px;font-weight:800;color:#1B5E20;margin-bottom:8px;">\u{1F3AF} Proyección al cierre vs meta <span style="font-weight:400;font-size:10.5px;color:#777;">(solo administrador · '+k.dias_trabajados+'/'+k.dias_totales+' días)</span></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'+cards+'</div></div>';
+  ids.forEach(function(i){var e=document.getElementById(i); if(e){e.innerHTML=html; e.style.display='';}});
+}
 function aplicarVisibilidadRO(){
+  try{ renderProyAdm(); }catch(e){ console.error(e); }
   var elc=document.getElementById('ro-card'); if(elc) elc.style.display=canRO?'':'none';
   if(typeof aplicarVisibilidadCosto==='function'){ try{ aplicarVisibilidadCosto(); }catch(e){} }
   if(typeof aplicarVisibilidadHistGraf==='function'){ try{ aplicarVisibilidadHistGraf(); }catch(e){} }
