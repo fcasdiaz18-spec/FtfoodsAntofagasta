@@ -2896,7 +2896,9 @@ function togDiv(gid){
 }
 // Liquidaciones no informadas al vendedor: no se consideran en su resumen (insights, reporte semanal)
 var LIQ_NO_INF={'Aníbal Marín':{skus:['71232'],mgMin:6}}; // 71232 Lomo liso porcionado A Punto + todo producto bajo margen
-function liqNoInf(vend,cod,mg){var r=LIQ_NO_INF[vend]; return !!r&&(r.skus.indexOf(String(cod))!==-1||(mg!=null&&mg<r.mgMin));}
+function liqNoInfRaw(vend,cod,mg){var r=LIQ_NO_INF[vend]; return !!r&&(r.skus.indexOf(String(cod))!==-1||(mg!=null&&mg<r.mgMin));}
+function liqNoInf(vend,cod,mg){return !isAdmin&&liqNoInfRaw(vend,cod,mg);} // el administrador las sigue viendo (marcadas)
+var LIQ_TAG=' <span style="font-size:8.5px;background:#1F4E79;color:#fff;border-radius:6px;padding:1px 5px;white-space:nowrap">\u{1F512} solo t\u00fa</span>';
 function repFiltLiq(R,v){
   if(!R||!R.ojo) return R;
   var o=R.ojo.filter(function(p){return !liqNoInf(p.vend||v,p.cod,p.mgp);});
@@ -2919,7 +2921,7 @@ function buildLiquidacionesAlert(filtroVend){
       if(p.liq&&!isAdmin) return;
       if(liqNoInf(cl.vend,p.cod,p.mg)) return;
       if(p.mg<=UMBRAL){
-        neg.push({vend:cl.vend,cli:cl.cli,cod_cli:cl.cod_cli,cod:p.cod,prod:p.prod,fact:p.fact,mg:p.mg});
+        neg.push({vend:cl.vend,cli:cl.cli,cod_cli:cl.cod_cli,cod:p.cod,prod:p.prod,fact:p.fact,mg:p.mg,adm:liqNoInfRaw(cl.vend,p.cod,p.mg)});
       }
     });
   });
@@ -2933,7 +2935,7 @@ function buildLiquidacionesAlert(filtroVend){
   neg.forEach(function(n,idx){
     var gid=uid+'_'+idx;
     html+='<div class="grp-row" onclick="togDiv(\''+gid+'\')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:3px 0;border-bottom:.5px solid #f5d5d5;">'
-      +'<span style="color:#5c0f0f;"><strong>'+n.prod+'</strong>'+(filtroVend?'':' \u00b7 '+n.vend)+' \u00b7 '+n.cli.substring(0,22)+' <span class="arr" style="color:#C00000;">\u25BC</span></span>'
+      +'<span style="color:#5c0f0f;"><strong>'+n.prod+'</strong>'+(n.adm?LIQ_TAG:'')+(filtroVend?'':' \u00b7 '+n.vend)+' \u00b7 '+n.cli.substring(0,22)+' <span class="arr" style="color:#C00000;">\u25BC</span></span>'
       +'<span style="color:#C00000;font-weight:700;white-space:nowrap;margin-left:8px;">'+n.mg+'% \u00b7 $'+n.fact.toFixed(2)+'M</span></div>';
     html+='<div class="det-'+gid+'" style="display:none;background:#fff;border-radius:6px;padding:8px 10px;margin:4px 0;font-size:10px;color:#444;line-height:1.7;">'
       +'<div><strong>Producto:</strong> '+n.prod+' (c\u00f3digo '+n.cod+')</div>'
@@ -4783,7 +4785,7 @@ function repHTML(v){
   }
   if(R.ojo.length){
     h+='<div class="rp-sec rp-red">&#9888;&#65039; Margen bajo esta semana <span>(bajo 6%: revisar precio antes de repetir)</span></div><table class="rp-t"><tr><th>Producto</th><th>Kg</th><th>$MM</th><th>Mg</th></tr>';
-    R.ojo.forEach(function(p){h+='<tr><td>'+repE(p.prod)+(todos&&p.vend?' <span class="rp-g">'+repE(p.vend.split(' ')[0])+'</span>':'')+'</td><td>'+repN(p.kg)+'</td><td>'+repN(p.fact,1)+'</td><td style="color:#C62828;font-weight:800">'+repN(p.mgp,1)+'%</td></tr>';});
+    R.ojo.forEach(function(p){h+='<tr><td>'+repE(p.prod)+(liqNoInfRaw(p.vend||v,p.cod,p.mgp)?LIQ_TAG:'')+(todos&&p.vend?' <span class="rp-g">'+repE(p.vend.split(' ')[0])+'</span>':'')+'</td><td>'+repN(p.kg)+'</td><td>'+repN(p.fact,1)+'</td><td style="color:#C62828;font-weight:800">'+repN(p.mgp,1)+'%</td></tr>';});
     h+='</table>';
   }
   // foco liquidaciones
