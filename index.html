@@ -545,7 +545,7 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
   <div id="dg5-meta" style="font-size:8px;color:#555;text-align:center;"></div>
   <div id="dg5-proy" style="font-size:8px;color:#375623;font-weight:600;text-align:center;"></div>
 </div>
-</div></div><div id="proy-adm-box" style="display:none;margin:10px 0 4px;"></div><div class="g2"><div><div class="sec">Focos del mes</div>
+</div></div><div id="proy-adm-box" style="display:none;margin:10px 0 4px;"></div><div class="sec" style="margin-top:14px">&#128222; Clientes sin compra hace 2 semanas o m&#225;s <span id="scc-sub" style="font-weight:400;color:#888;font-size:11px"></span></div><div class="card" id="scc-card" style="padding:12px 14px;margin-bottom:14px"></div><div class="g2"><div><div class="sec">Focos del mes</div>
 <div id="foco-inicio-box" style="background:linear-gradient(135deg,#9C1C1C 0%,#6B0F0F 100%);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px;">
 </div><div class="al ar" id="ro-alert"><div style="font-size:18px;flex-shrink:0;">&#128680;</div><div><div class="at">Resultado operacional cr&#237;tico</div><div class="ad" id="ro-txt"></div></div></div><div class="al" style="background:#F3F0FA;border-left:4px solid #7030A0;cursor:pointer;" onclick="go('stock',document.querySelectorAll('.tab')[5])"><div style="font-size:18px;flex-shrink:0;">&#128230;</div><div style="flex:1"><div class="at" style="color:#4A2E6B;">Gesti&#243;n de Inventario &#8594;</div><div class="ad">Sin venta, estad&#237;a cr&#237;tica y productos urgentes de liquidar. Ver detalle completo.</div></div></div><div class="al aa"><div style="font-size:18px;flex-shrink:0;">&#128230;</div><div><div class="at" id="t3-txt"></div><div class="ad">Vacuno Importado concentra el mayor riesgo.</div></div></div><div class="al ag"><div style="font-size:18px;flex-shrink:0;">&#9989;</div><div><div class="at" id="mg-txt"></div><div class="ad">Carolina Aracena y Anibal Marin lideran el margen.</div></div></div></div><div><div class="sec">Facturacion por vendedor</div><div class="card"><canvas id="c1" height="200"></canvas></div></div></div></div>
 <!-- TOP 10 CLIENTES Y PRODUCTOS -->
@@ -2068,7 +2068,7 @@ if(fsAuth){
       isAdmin=ADMIN_EMAILS.indexOf(currentUserEmail)!==-1;
       isLogistica=LOGISTICA_EMAILS.indexOf(currentUserEmail)!==-1;
       setTimeout(function(){ try{ if(document.getElementById('tc')&&document.getElementById('sb-c')) buildCliTable(); }catch(e){ console.error(e); } },0);
-       canRO=roOk(); if(typeof aplicarVisibilidadRO==='function') aplicarVisibilidadRO(); setTimeout(function(){try{motivMaybeShow();}catch(e){}},1200);
+       canRO=roOk(); if(typeof aplicarVisibilidadRO==='function') aplicarVisibilidadRO(); setTimeout(function(){try{motivMaybeShow();}catch(e){}},1200); try{ sccF.v=null; renderSCC(); }catch(e){ console.error(e); }
       if(isAdmin){ opsOk=true; secOk=true; }
       var tabSec=document.getElementById('tab-seguridad');
       if(tabSec) tabSec.style.display=isAdmin?'':'none';
@@ -4145,6 +4145,7 @@ document.addEventListener('DOMContentLoaded',function(){
       +'</div></div>';
   });
   document.getElementById('vcs').innerHTML=vch;
+  try{ renderSCC(); }catch(e){ console.error(e); }
 
   // Filtros clientes
   document.getElementById('fb-v').innerHTML=
@@ -5008,6 +5009,52 @@ function cliSinCompraHtml(vn,max){
       return '<tr><td><b>'+x.cli+'</b></td>'+(vn?'':'<td style="color:'+((D.colores||{})[x.vend]||'#888')+';font-weight:600">'+x.vend+'</td>')
         +'<td style="text-align:center;font-weight:800;color:'+c+'">'+x.gap+'</td><td style="text-align:center">S'+x.ult+'</td><td style="text-align:right">'+(x.prom?fm(x.prom):'—')+'</td></tr>'; }).join('')
     +'</table>'+(max&&R.L.length>max?'<div style="font-size:10px;color:#888;margin-top:3px">+'+(R.L.length-max)+' más · ordenados por compra mensual promedio</div>':'')+'</div>';
+}
+// ===== INICIO: tabla interactiva de clientes sin compra 2+ semanas =====
+var sccF={v:null,min:2,q:'',k:'prom',d:-1};
+function sccSet(k,v){ if(k==='k'){ if(sccF.k===v) sccF.d=-sccF.d; else { sccF.k=v; sccF.d=(v==='cli'||v==='vend')?1:-1; } } else sccF[k]=v; renderSCC(); }
+function sccCSV(){
+  var R=cliSinCompra(''); if(!R) return; var L=sccRows(R);
+  var rows=[['Codigo','Cliente','Vendedor','Semanas sin compra','Ultima compra','Semanas con compra','Prom. mensual $']].concat(L.map(function(x){return [x.cod,x.cli,x.vend,x.gap,'S'+x.ult,x.nb+'/'+R.nsem,Math.round(x.prom)];}));
+  var a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('﻿'+rows.map(function(r){return r.join(';');}).join('\n')); a.download='clientes_sin_compra_S'+R.hasta+'.csv'; a.click();
+}
+function sccRows(R){
+  var q=sccF.q.toLowerCase();
+  var L=R.L.filter(function(x){ return (!sccF.v||sccF.v==='Todos'||x.vend===sccF.v)&&x.gap>=sccF.min&&(!q||x.cli.toLowerCase().indexOf(q)>-1||String(x.cod).indexOf(q)>-1); });
+  var k=sccF.k, d=sccF.d;
+  return L.sort(function(a,b){ var r=(k==='cli'||k==='vend')?String(a[k]).localeCompare(String(b[k]),'es'):(a[k]-b[k]); return r*d||(b.prom-a.prom); });
+}
+function renderSCC(){
+  var card=document.getElementById('scc-card'); if(!card) return;
+  var R=cliSinCompra(''); if(!R){ card.style.display='none'; return; }
+  if(sccF.v===null){ var mv=(typeof cliMiVend==='function')?cliMiVend():''; sccF.v=(mv&&mv!=='Todos')?mv:'Todos'; }
+  var sub=document.getElementById('scc-sub'); if(sub) sub.textContent='(al S'+R.hasta+' · clientes habituales: 3 o más semanas con compra en las últimas '+R.nsem+')';
+  var cnt={}; R.L.forEach(function(x){ if(x.gap>=sccF.min) cnt[x.vend]=(cnt[x.vend]||0)+1; });
+  var tot=R.L.filter(function(x){return x.gap>=sccF.min;}).length;
+  var vs=['Todos'].concat((D.vendedores||[]).map(function(v){return v.nombre;}).filter(function(n){return cnt[n];}));
+  var L=sccRows(R), fm=function(v){return '$'+(v/1e6).toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})+'M';};
+  var mon=L.reduce(function(s,x){return s+x.prom;},0);
+  var th=function(k,l,al){ var on=sccF.k===k; return '<th onclick="sccSet(\'k\',\''+k+'\')" style="cursor:pointer;user-select:none;white-space:nowrap;text-align:'+(al||'left')+';'+(on?'background:#9C1C1C;':'')+'">'+l+' <span style="font-size:10px;opacity:'+(on?1:.55)+'">'+(on?(sccF.d<0?'▼':'▲'):'⇅')+'</span></th>'; };
+  var h='<div class="fbtns" style="margin-bottom:8px">'+vs.map(function(n){ var c=n==='Todos'?tot:cnt[n], col=n==='Todos'?'':(D.colores||{})[n]||'';
+      return '<button class="fbtn'+(sccF.v===n?' on':'')+'" onclick="sccSet(\'v\',\''+n+'\')">'+(col?'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+col+';margin-right:5px"></span>':'')+n+' <b>'+c+'</b></button>'; }).join('')+'</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px">'
+    +'<input class="sb" id="scc-q" placeholder="Buscar cliente o código..." value="'+sccF.q.replace(/"/g,'&quot;')+'" oninput="sccF.q=this.value;renderSCC();var e=document.getElementById(\'scc-q\');e.focus();e.setSelectionRange(e.value.length,e.value.length)" style="flex:1;min-width:180px;margin:0">'
+    +'<div class="fbtns" style="margin:0">'+[[2,'2+ sem'],[3,'3+ sem'],[4,'4+ sem']].map(function(o){return '<button class="fbtn'+(sccF.min===o[0]?' on':'')+'" onclick="sccSet(\'min\','+o[0]+')">'+o[1]+'</button>';}).join('')+'</div>'
+    +'<button class="fbtn" onclick="sccCSV()" title="Descargar listado">⬇ CSV</button></div>'
+    +'<div style="font-size:11.5px;color:#555;margin-bottom:6px"><b>'+L.length+'</b> cliente'+(L.length!==1?'s':'')+' · compra mensual promedio en juego: <b style="color:#9C0006">'+fm(mon)+'</b></div>';
+  if(!L.length){ h+='<div style="background:#E8F5E9;border-radius:8px;padding:10px;font-size:11.5px;color:#375623">✅ Sin clientes habituales en esta condición.</div>'; card.innerHTML=h; return; }
+  h+='<div style="overflow-x:auto;max-height:440px;overflow-y:auto"><table style="font-size:11.5px;margin:0;width:100%"><thead><tr>'+th('cli','Cliente')+(sccF.v==='Todos'?th('vend','Vendedor'):'')
+    +th('gap','Sem. sin compra','center')+th('ult','Última compra','center')+th('nb','Semanas con compra','center')+th('prom','Prom. mes','right')+'</tr></thead><tbody>'
+    +L.map(function(x){ var c=x.gap>=4?['#FFC7CE','#9C0006']:x.gap>=3?['#FCE4D6','#C55A11']:['#FFEB9C','#7D6608'];
+      return '<tr><td><b>'+x.cli+'</b> <span style="color:#999;font-family:monospace;font-size:10px">'+x.cod+'</span></td>'
+        +(sccF.v==='Todos'?'<td style="color:'+((D.colores||{})[x.vend]||'#888')+';font-weight:600;white-space:nowrap">'+x.vend+'</td>':'')
+        +'<td style="text-align:center"><span class="badge" style="background:'+c[0]+';color:'+c[1]+'">'+x.gap+' sem</span></td>'
+        +'<td style="text-align:center">S'+x.ult+'</td>'
+        +'<td style="text-align:center">'+x.nb+' / '+R.nsem+' <span style="display:inline-block;width:40px;height:5px;background:#eee;border-radius:3px;vertical-align:middle;margin-left:4px"><i style="display:block;height:5px;border-radius:3px;background:#1F4E79;width:'+Math.round(x.nb/R.nsem*100)+'%"></i></span></td>'
+        +'<td style="text-align:right;font-weight:700">'+(x.prom?fm(x.prom):'—')+'</td></tr>'; }).join('')
+    +'</tbody></table></div>'
+    +'<div style="font-size:10px;color:#888;margin-top:6px">Semanas lunes a domingo según los cortes de venta cargados. Prom. mes = promedio de los últimos 3 meses cerrados. Clic en los encabezados para ordenar.</div>';
+  card.innerHTML=h;
 }
 function motivMaybeShow(vnForce){
   if(motivShown&&!vnForce) return;
