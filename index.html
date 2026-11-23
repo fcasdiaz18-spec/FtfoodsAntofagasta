@@ -2670,8 +2670,21 @@ function filtCV(n,el){
   buildCliTable();
 }
 
-// ===== CLIENTES: proyeccion vs mes anterior (todos) + historial mensual (solo Felipe) =====
+// ===== CLIENTES: proyeccion vs mes anterior (todos) + historial mensual (Felipe: todos; vendedor: solo sus clientes) + orden por columnas =====
 function esFelipe(){ return (currentUserEmail||'').toLowerCase()==='felipe.castillo@ftfoods.cl'; }
+function cliMiVend(){ if(esFelipe()) return 'Todos'; try{ var v=repVendOf(currentUserEmail); return (v&&v!=='Todos')?v:''; }catch(e){ return ''; } }
+function cliPuedeHist(c){ var v=cliMiVend(); return v==='Todos'||(!!v&&c.vend===v); }
+var cliSort={k:'',d:0};
+function cliSortBy(k){ var txt=(k==='vend'||k==='cli'); if(cliSort.k!==k){ cliSort={k:k,d:txt?1:-1}; } else if(cliSort.d===(txt?1:-1)){ cliSort.d=-cliSort.d; } else { cliSort={k:'',d:0}; } buildCliTable(); }
+function cliSortTh(k,lbl,st,tt){ var on=cliSort.k===k, ar=on?(cliSort.d<0?'\u25BC':'\u25B2'):'\u21C5';
+  return '<th onclick="cliSortBy(\''+k+'\')" title="'+(tt||'Ordenar')+'" style="cursor:pointer;user-select:none;white-space:nowrap;'+(st||'')+(on?'background:#9C1C1C;':'')+'">'+lbl+' <span style="font-size:10px;opacity:'+(on?1:.55)+'">'+ar+'</span></th>'; }
+function cliProyData(c){
+  var cod=String(c.cod_cli||''), K=D.kpis, f=K.dias_trabajados?K.dias_totales/K.dias_trabajados:1;
+  var pr=(+c.fact||0)*1e6*f, M=(typeof CLI_MES!=='undefined')?CLI_MES:null, ant=null, mAnt=M?M.meses[M.meses.length-1]:'';
+  var nRows=(D.clientes||[]).filter(function(x){return String(x.cod_cli)===cod;}).length;
+  if(M){ if(nRows>1){ ant=(M.pv||{})[cod+'|'+c.vend]||null; } else { var h=M.c[cod]; if(h&&h[h.length-1]) ant=h[h.length-1][0]; } }
+  return {pr:pr,ant:ant,mAnt:mAnt,d:ant?(pr/ant-1)*100:null};
+}
 var CLI_MES_N=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 function cliCurAgg(){
   var A={}; (D.clientes||[]).forEach(function(c){ var k=String(c.cod_cli||''), a=A[k]||(A[k]={nt:0,kg:0,mg:0}); var f=(+c.fact||0)*1e6; a.nt+=f; a.kg+=(+c.kg||0); a.mg+=f*(+c.mg||0)/100; });
@@ -2680,10 +2693,7 @@ function cliCurAgg(){
 function cliFmtM(v){ return '$'+(v/1e6).toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})+'M'; }
 function cliMesActual(){ var p=(D.kpis.fecha||'').split('-'); return CLI_MES_N[parseInt(p[1],10)-1]||''; }
 function cliProyCell(c,A){
-  var cod=String(c.cod_cli||''), K=D.kpis, f=K.dias_trabajados?K.dias_totales/K.dias_trabajados:1;
-  var pr=(+c.fact||0)*1e6*f, M=(typeof CLI_MES!=='undefined')?CLI_MES:null, ant=null, mAnt=M?M.meses[M.meses.length-1]:'';
-  var nRows=(D.clientes||[]).filter(function(x){return String(x.cod_cli)===cod;}).length;
-  if(M){ if(nRows>1){ ant=(M.pv||{})[cod+'|'+c.vend]||null; } else { var h=M.c[cod]; if(h&&h[h.length-1]) ant=h[h.length-1][0]; } }
+  var P=cliProyData(c), pr=P.pr, ant=P.ant, mAnt=P.mAnt;
   var t;
   if(!ant){ t='<span class="badge" style="background:#EFF4FF;color:#1F4E79">Nuevo vs '+mAnt.toLowerCase()+'</span>'; }
   else { var d=(pr/ant-1)*100, c=d>=5?['#E2EFDA','#375623','▲','Vas bien']:d>=-5?['#FFEB9C','#7D6608','→','En línea']:['#FFC7CE','#9C0006','▼','Bajo'];
@@ -2691,14 +2701,15 @@ function cliProyCell(c,A){
       +'<div style="font-size:9.5px;color:#888;margin-top:2px">'+mAnt+' '+cliFmtM(ant)+'</div>'; }
   return '<td style="text-align:right;white-space:nowrap"><b>'+cliFmtM(pr)+'</b></td><td style="white-space:nowrap">'+t+'</td>';
 }
-function cliHistHtml(cod,A){
+function cliHistHtml(cod,A,cRow){
   var M=(typeof CLI_MES!=='undefined')?CLI_MES:{meses:[],c:{},notas:{}}, h=M.c[String(cod)]||[], K=D.kpis, f=K.dias_trabajados?K.dias_totales/K.dias_trabajados:1;
-  var a=A[String(cod)]||{nt:0,kg:0,mg:0}, mA=cliMesActual().slice(0,3);
+  var a=A[String(cod)]||{nt:0,kg:0,mg:0}, mA=cliMesActual().slice(0,3), _fe=esFelipe();
+  var hideMg=!isAdmin&&(D.clientes||[]).some(function(x){return String(x.cod_cli)===String(cod)&&x.liq;});
   var cols=M.meses.map(function(m,i){var x=h[i];return {l:m+(M.notas&&M.notas[m]?'*':''),nt:x?x[0]:0,kg:x?x[1]:0,mg:x?x[2]:0,sin:!x};});
   var u3=cols.slice(-3), p3={l:'Prom. 3m',nt:0,kg:0,mg:0}; u3.forEach(function(c){p3.nt+=c.nt/3;p3.kg+=c.kg/3;p3.mg+=c.mg/3;});
   cols.push(p3);
-  cols.push({l:mA+' al día '+K.dias_trabajados,nt:a.nt,kg:a.kg,mg:a.mg,cur:1});
-  cols.push({l:mA+' proyect.',nt:a.nt*f,kg:a.kg*f,mg:a.mg*f,pr:1});
+  cols.push({l:mA+' al día '+K.dias_trabajados,nt:a.nt,kg:a.kg,mg:a.mg,cur:1,nomg:hideMg});
+  cols.push({l:mA+' proyect.',nt:a.nt*f,kg:a.kg*f,mg:a.mg*f,pr:1,nomg:hideMg});
   var mx=Math.max.apply(null,cols.map(function(c){return c.nt;}).concat([1]));
   var fm=function(v,d){return (+v).toLocaleString('es-CL',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});};
   var th=function(c){return '<th style="text-align:right;padding:4px 8px;font-size:10px;color:#fff;background:'+(c.pr?'#9C1C1C':c.cur?'#6E0F0F':c.l==='Prom. 3m'?'#555':'#1F4E79')+';white-space:nowrap">'+c.l+'</th>';};
@@ -2708,11 +2719,11 @@ function cliHistHtml(cod,A){
   var r='<tr><td style="padding:4px 8px"></td>'+cols.map(function(c){return td(bar(c),c);}).join('')+'</tr>'
     +'<tr><td style="padding:4px 8px;font-weight:700">Facturación</td>'+cols.map(function(c){return td(c.sin?'—':cliFmtM(c.nt),c,'font-weight:700;color:#1F4E79');}).join('')+'</tr>'
     +'<tr><td style="padding:4px 8px;font-weight:700">Kilos</td>'+cols.map(function(c){return td(c.sin?'—':fm(c.kg,0)+' kg',c);}).join('')+'</tr>'
-    +'<tr><td style="padding:4px 8px;font-weight:700">Margen bruto</td>'+cols.map(function(c){return td(c.sin?'—':cliFmtM(c.mg),c);}).join('')+'</tr>'
-    +'<tr><td style="padding:4px 8px;font-weight:700">Margen %</td>'+cols.map(function(c){var p=c.nt?c.mg/c.nt*100:null;return td(p==null?'—':fm(p,1)+'%',c,p==null?'':'font-weight:700;color:'+mgc(p));}).join('')+'</tr>'
+    +'<tr><td style="padding:4px 8px;font-weight:700">Margen bruto</td>'+cols.map(function(c){return td(c.sin||c.nomg?'—':cliFmtM(c.mg),c);}).join('')+'</tr>'
+    +'<tr><td style="padding:4px 8px;font-weight:700">Margen %</td>'+cols.map(function(c){var p=(c.nt&&!c.nomg)?c.mg/c.nt*100:null;return td(p==null?'—':fm(p,1)+'%',c,p==null?'':'font-weight:700;color:'+mgc(p));}).join('')+'</tr>'
     +'<tr><td style="padding:4px 8px;font-weight:700">$/kg</td>'+cols.map(function(c){return td(c.kg>0?'$'+fm(c.nt/c.kg,0):'—',c,'color:#666');}).join('')+'</tr>';
   var n=Object.keys(M.notas||{}).map(function(m){return m+'* '+M.notas[m];}).join(' · ');
-  return '<div style="padding:8px 10px;background:#FAFAFA;overflow-x:auto"><div style="font-size:11px;font-weight:800;color:#6E0F0F;margin-bottom:4px">Historial mensual del cliente <span style="font-weight:400;color:#888">(solo tú · todos los vendedores que lo atendieron)</span></div>'
+  return '<div style="padding:8px 10px;background:#FAFAFA;overflow-x:auto"><div style="font-size:11px;font-weight:800;color:#6E0F0F;margin-bottom:4px">Historial mensual del cliente <span style="font-weight:400;color:#888">('+(_fe?'solo tú · todos los vendedores que lo atendieron':'tu cliente · incluye compras atendidas por otros vendedores')+')</span></div>'
     +'<table style="font-size:11px;margin:0;border-collapse:collapse;min-width:100%"><tr><th style="background:#1F4E79;color:#fff;font-size:10px;padding:4px 8px;text-align:left">Mes</th>'+cols.map(th).join('')+'</tr>'+r+'</table>'
     +'<div style="font-size:9.5px;color:#888;margin-top:4px">Proyectado = ritmo al día '+K.dias_trabajados+' de '+K.dias_totales+'.'+(n?' '+n+'.':'')+'</div></div>';
 }
@@ -2726,9 +2737,20 @@ function togCP(el){
 function buildCliTable(){
   var q=document.getElementById('sb-c').value.toLowerCase();
   var src=filtVend?D.clientes.filter(function(c){return c.vend===filtVend;}):D.clientes;
-  var _fe=esFelipe(), _A=cliCurAgg(), _M=(typeof CLI_MES!=='undefined')?CLI_MES:null, _ma=_M?_M.meses[_M.meses.length-1]:'', _nc=_fe?9:8;
-  var h='<tr>'+(_fe?'<th style="width:26px"></th>':'')+'<th>Vendedor</th><th>Cod.</th><th>Cliente</th><th style="text-align:right">Fact.</th><th>Prods</th><th>Mg%</th><th style="text-align:right" title="Facturación del mes proyectada al ritmo actual">Proy. '+cliMesActual().slice(0,3).toLowerCase()+'</th><th>Vs '+_ma.toLowerCase()+'</th></tr>';
+  var _fe=!!cliMiVend(), _A=cliCurAgg(), _M=(typeof CLI_MES!=='undefined')?CLI_MES:null, _ma=_M?_M.meses[_M.meses.length-1]:'', _nc=_fe?9:8;
+  var h='<tr>'+(_fe?'<th style="width:26px"></th>':'')+cliSortTh('vend','Vendedor')+'<th>Cod.</th>'+cliSortTh('cli','Cliente')+cliSortTh('fact','Fact.','text-align:right;','Facturación del mes')+cliSortTh('prods','Prods','','Cantidad de productos comprados')+cliSortTh('mg','Mg%','','Margen %')+cliSortTh('proy','Proy. '+cliMesActual().slice(0,3).toLowerCase(),'text-align:right;','Facturación del mes proyectada al ritmo actual')+cliSortTh('vs','Vs '+_ma.toLowerCase(),'','Variación de la proyección vs mes anterior')+'</tr>';
+  if(cliSort.k){
+    var _sv=function(c){ var k=cliSort.k;
+      if(k==='vend') return (c.vend||'').toLowerCase(); if(k==='cli') return (c.cli||'').toLowerCase();
+      if(k==='fact') return +c.fact||0; if(k==='prods') return (c.productos||[]).filter(function(p){return isAdmin||!p.liq;}).length;
+      if(k==='mg') return (c.liq&&!isAdmin)?null:(c.mg==null?null:+c.mg);
+      var P=cliProyData(c); return k==='proy'?P.pr:P.d; };
+    src=src.map(function(c,i){return {c:c,v:_sv(c),i:i};}).sort(function(a,b){
+      if(a.v==null&&b.v==null) return a.i-b.i; if(a.v==null) return 1; if(b.v==null) return -1;
+      var r=(typeof a.v==='string')?a.v.localeCompare(b.v,'es'):(a.v-b.v); return r?r*cliSort.d:a.i-b.i; }).map(function(o){return o.c;});
+  }
   src.forEach(function(c,i){
+    var _ph=_fe&&cliPuedeHist(c);
     if(q&&!c.cli.toLowerCase().includes(q)&&!c.vend.toLowerCase().includes(q)&&!(c.cod_cli||'').includes(q)) return;
     var _pv=(c.productos||[]).filter(function(p){return isAdmin||!p.liq;});
     var _mgv=(c.liq&&!isAdmin)?null:c.mg;
@@ -2741,14 +2763,14 @@ function buildCliTable(){
       prRow='<tr class="prod-row cprod-'+cid+'"><td colspan="'+_nc+'" style="padding:0;background:#EFF4FF;">'        +'<table style="border-radius:0;border:none;margin:0">'        +'<tr style="background:#1F4E79">'        +'<th style="color:#fff;font-size:10px;padding:5px 10px">Cod.</th>'        +'<th style="color:#fff;font-size:10px;padding:5px 10px">Producto</th>'        +'<th style="color:#fff;font-size:10px;text-align:right;padding:5px 10px">Fact.</th>'        +'<th style="color:#fff;font-size:10px;text-align:center;padding:5px 10px">Mg% *cli</th></tr>'        +_pv.map(function(p){          var pmg=(p.mg!=null&&p.mg!==undefined)?p.mg:null;          var mgBg=pmg!=null?(pmg>=18?'#E2EFDA':pmg>=12?'#FFEB9C':'#FFC7CE'):'transparent';          var mgFc=pmg!=null?(pmg>=18?'#375623':pmg>=12?'#7D6608':'#9C0006'):'#888';          var mgTxt=pmg!=null?pmg.toFixed(1)+'%':(c.mg!=null?c.mg.toFixed(1)+'% *':'—');          var mgFc=pmg!=null?mgFc:(c.mg!=null?(c.mg>=18?'#375623':c.mg>=12?'#7D6608':'#9C0006'):'#888');          var mgBg=pmg!=null?mgBg:(c.mg!=null?(c.mg>=18?'#E2EFDA':c.mg>=12?'#FFEB9C':'#FFC7CE'):'transparent');          return '<tr>'            +'<td style="font-family:monospace;font-size:10px;padding:5px 10px">'+p.cod+'</td>'            +'<td style="font-size:11px;padding:5px 10px">'+p.prod+'</td>'            +'<td style="text-align:right;font-weight:600;padding:5px 10px;color:#1F4E79">$'+p.fact+'M</td>'            +'<td style="text-align:center;padding:5px 8px"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:'+mgBg+';color:'+mgFc+'">'+mgTxt+'</span></td>'            +'</tr>';        }).join('')        +'</table></td></tr>';
     }
     h+='<tr style="cursor:pointer" data-cid="'+cid+'" onclick="togCP(this)">'
-      +(_fe?'<td style="text-align:center;padding:2px"><button id="cmb-'+cid+'" onclick="togCM(event,\''+cid+'\')" title="Historial mensual" style="width:22px;height:22px;border-radius:50%;border:1px solid #9C1C1C;background:#fff;color:#9C1C1C;font-weight:800;font-size:14px;line-height:18px;cursor:pointer;padding:0">+</button></td>':'')
+      +(_fe?'<td style="text-align:center;padding:2px">'+(_ph?'<button id="cmb-'+cid+'" onclick="togCM(event,\''+cid+'\')" title="Historial mensual" style="width:22px;height:22px;border-radius:50%;border:1px solid #9C1C1C;background:#fff;color:#9C1C1C;font-weight:800;font-size:14px;line-height:18px;cursor:pointer;padding:0">+</button>':'')+'</td>':'')
       +'<td style="color:'+col+';font-weight:600">'+c.vend+'</td>'
       +'<td style="font-family:monospace;font-size:10px;color:#888">'+(c.cod_cli||'')+'</td>'
       +'<td><strong>'+c.cli+'</strong></td>'
       +'<td style="text-align:right">$'+c.fact+'M</td>'
       +'<td style="text-align:center"><span class="badge" style="background:#E8F0FE;color:#1F4E79">'+nP+'</span></td>'
       +'<td><span class="badge '+mb+'">'+(_mgv==null?'\u2014':_mgv+'%')+'</span></td>'+cliProyCell(c,_A)+'</tr>'
-      +(_fe?'<tr id="cmes-'+cid+'" style="display:none"><td colspan="'+_nc+'" style="padding:0">'+cliHistHtml(c.cod_cli,_A)+'</td></tr>':'')
+      +(_ph?'<tr id="cmes-'+cid+'" style="display:none"><td colspan="'+_nc+'" style="padding:0">'+cliHistHtml(c.cod_cli,_A,c)+'</td></tr>':'')
       +prRow;
   });
   document.getElementById('tc').innerHTML=h;
