@@ -733,7 +733,7 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
     <div class="fbtns" id="semcat-pn" style="margin:0"></div>
     <div class="fbtns" id="semcat-met" style="margin:0;margin-left:auto"></div>
   </div>
-  <div style="position:relative;height:260px;"><canvas id="semcat-c"></canvas></div>
+  <div style="position:relative;height:320px;"><canvas id="semcat-c"></canvas></div>
   <div id="semcat-ins" style="margin-top:10px;"></div>
   <div style="overflow-x:auto;margin-top:8px;"><table id="semcat-t" style="font-size:11px;width:100%"></table></div>
   <div id="semcat-nota" style="font-size:10px;color:#888;margin-top:6px;"></div>
@@ -3331,16 +3331,57 @@ function renderSemCat(){
     ds=[{label:semCatF.pn==='solo'?'Posta negra Brasil':semCatF.pn==='sin'?'Sin posta negra Brasil':(semCatF.cat==='Todas'?'Sucursal':semCatF.cat),
          data:rows.map(function(r){return +val(r).toFixed(1);}),backgroundColor:semCatF.pn==='solo'?'#9C1C1C':'#1F4E79'}];
   }
-  var u=semCatF.met==='mm'?' $MM':semCatF.met==='kgd'?' kg/día':' kg';
+  var u=semCatF.met==='mm'?' $MM':semCatF.met==='kgd'?' kg/día':' kg', dB=semCatF.met==='mm'?1:0;
+  // Linea: kg/dia (o $/kg cuando las barras ya son kg/dia)
+  var lnPrecio=semCatF.met==='kgd';
+  var lnData=rows.map(function(r){return lnPrecio?(r.t.kg>0?Math.round(r.t.nt/r.t.kg):null):Math.round(r.kgd);});
+  var lnLbl=lnPrecio?'Precio $/kg':'Kg por día', lnU=lnPrecio?'$':'';
+  ds.forEach(function(d){d.order=2; d.yAxisID='y'; d.borderRadius=3;});
+  ds.push({type:'line',label:lnLbl,data:lnData,yAxisID:'y2',order:1,borderColor:'#C9A227',backgroundColor:'#C9A227',borderWidth:2.5,
+    pointRadius:4,pointHoverRadius:6,pointBackgroundColor:'#fff',pointBorderColor:'#C9A227',pointBorderWidth:2,cubicInterpolationMode:'monotone',spanGaps:true,_ln:true});
+  var tot=rows.map(function(r){return val(r);});
+  var lblPlug={id:'semcatLbl',afterDatasetsDraw:function(ch){
+    var cx=ch.ctx; cx.save(); cx.textAlign='center';
+    var bars=ch.data.datasets.map(function(d,i){return d._ln?null:ch.getDatasetMeta(i);}).filter(function(m){return m&&!m.hidden;});
+    if(!bars.length){cx.restore();return;}
+    var top=bars[bars.length-1];
+    top.data.forEach(function(el,i){
+      var v=tot[i]; if(!v) return;
+      var yTop=Math.min.apply(null,bars.map(function(m){return m.data[i].y;}));
+      cx.font='bold 11px Inter,Arial,sans-serif'; cx.fillStyle='#1F1F1F'; cx.textBaseline='bottom';
+      cx.fillText(fmt(v,dB),el.x,yTop-3);
+    });
+    if(stack){ // kilos de posta negra dentro del tramo rojo
+      var m=bars[bars.length-1];
+      m.data.forEach(function(el,i){
+        var v=ch.data.datasets[1].data[i]; if(!v) return; var h=Math.abs(el.base-el.y); if(h<14) return; var lp=ch.getDatasetMeta(ch.data.datasets.length-1).data[i]; if(lp&&Math.abs((el.y+el.base)/2-(lp.y+14))<16) return;
+        cx.font='bold 10px Inter,Arial,sans-serif'; cx.fillStyle='#fff'; cx.textBaseline='middle';
+        cx.fillText(fmt(v,dB),el.x,(el.y+el.base)/2);
+      });
+    }
+    var lm=ch.getDatasetMeta(ch.data.datasets.length-1);
+    if(lm&&!lm.hidden) lm.data.forEach(function(pt,i){
+      var v=lnData[i]; if(!v) return;
+      var t=lnU+fmt(v,0); cx.font='bold 10px Inter,Arial,sans-serif'; var w=cx.measureText(t).width+8;
+      cx.fillStyle='rgba(255,255,255,.92)'; cx.strokeStyle='#C9A227'; cx.lineWidth=1;
+      var x=pt.x-w/2, y=(pt.y+24>ch.chartArea.bottom)?pt.y-22:pt.y+7; if(cx.roundRect){cx.beginPath();cx.roundRect(x,y,w,15,4);cx.fill();cx.stroke();}else{cx.fillRect(x,y,w,15);cx.strokeRect(x,y,w,15);}
+      cx.fillStyle='#8A6D0B'; cx.textBaseline='middle'; cx.fillText(t,pt.x,y+7.5);
+    });
+    cx.restore();
+  }};
   var el=document.getElementById('semcat-c');
   if(el&&typeof Chart!=='undefined'){
     if(semCatChart){ try{semCatChart.destroy();}catch(e){} }
-    semCatChart=new Chart(el.getContext('2d'),{type:'bar',data:{labels:rows.map(function(r){return r.lbl;}),datasets:ds},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:ds.length>1,position:'bottom',labels:{boxWidth:12,font:{size:10}}},
+    var mxB=Math.max.apply(null,tot.concat([0])), mxL=Math.max.apply(null,lnData.filter(function(v){return v!=null;}).concat([0]));
+    semCatChart=new Chart(el.getContext('2d'),{type:'bar',data:{labels:rows.map(function(r){return r.lbl;}),datasets:ds},plugins:[lblPlug],
+      options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:10}}},
         tooltip:{callbacks:{title:function(it){var r=rows[it[0].dataIndex];return 'S'+r.w.s+' · '+r.rango+' · '+r.dias+' días';},
-          label:function(c){return c.dataset.label+': '+fmt(c.parsed.y,semCatF.met==='mm'?1:0)+u;},
-          footer:function(it){var r=rows[it[0].dataIndex];return stack?'Total: '+fmt(val(r),semCatF.met==='mm'?1:0)+u:'';}}}},
-        scales:{x:{stacked:stack,ticks:{font:{size:10}},grid:{display:false}},y:{stacked:stack,beginAtZero:true,ticks:{font:{size:10},callback:function(v){return fmt(v,0);}}}}}});
+          label:function(c){return c.dataset._ln?c.dataset.label+': '+lnU+fmt(c.parsed.y,0)+(lnPrecio?'':' kg/día'):c.dataset.label+': '+fmt(c.parsed.y,dB)+u;},
+          footer:function(it){var r=rows[it[0].dataIndex];return stack?'Total: '+fmt(val(r),dB)+u:'';}}}},
+        scales:{x:{stacked:stack,ticks:{font:{size:10}},grid:{display:false}},
+          y:{stacked:stack,beginAtZero:true,suggestedMax:mxB*1.12,title:{display:true,text:u.trim(),font:{size:10}},ticks:{font:{size:10},callback:function(v){return fmt(v,0);}}},
+          y2:(function(){var o={position:'right',beginAtZero:!lnPrecio,max:Math.ceil(mxL*2.3/100)*100||1,grid:{display:false},title:{display:true,text:lnLbl,font:{size:10},color:'#8A6D0B'},ticks:{font:{size:10},color:'#8A6D0B',callback:function(v){return lnU+fmt(v,0);}}};if(lnPrecio){var vv=lnData.filter(function(v){return v;}),mn=Math.min.apply(null,vv),rg=Math.max(mxL-mn,200);o.min=Math.max(0,Math.floor((mn-rg*.3)/100)*100);o.max=Math.ceil((mxL+rg*1.6)/100)*100;}return o;})()}}});
   }
   // Insight: ultima semana vs promedio por dia de las 4 anteriores
   var n=rows.length, ins='';
