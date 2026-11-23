@@ -4135,6 +4135,7 @@ document.addEventListener('DOMContentLoaded',function(){
         +'<div style="font-size:10px;color:#888;margin-bottom:3px">Clientes recuperados: <strong style="color:'+bc(pr)+'">'+v.rec+' / '+(v.meta_rec||7)+'</strong></div>'
         +'<div class="bar"><div class="bf" style="width:'+pr+'%;background:'+bc(pr)+'"></div></div>'
         +'</div>'):'')
+      +cliSinCompraHtml(v.nombre)
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
       +'<div><div class="mt">Top 10 Productos</div>'
       +(top?('<table style="font-size:11px;margin:0">'+encTop.replace('NOMBRE','Producto')+top+'</table>'):'<div style="font-size:11px;color:#888;padding:8px 0">Sin datos</div>')+'</div>'
@@ -4974,6 +4975,40 @@ function motivFD(vn){
   F.sort(function(a,b){return b.s-a.s;}); W.sort(function(a,b){return b.s-a.s;});
   return {F:F.slice(0,3).map(function(x){return x.t;}),W:W.slice(0,3).map(function(x){return x.t;}),vend:vend};
 }
+// ===== Clientes sin compra hace 2+ semanas (DEM_CLI) por vendedor =====
+function cliSinCompra(vn){
+  var H=(typeof DEM_CLI!=='undefined')?DEM_CLI:null; if(!H||!H.rec.length) return null;
+  var wk=function(f){var d=new Date(f+'T00:00:00Z'),dn=(d.getUTCDay()+6)%7;return new Date(d.getTime()-dn*864e5).toISOString().slice(0,10);};
+  var W=[], S={}, lastV={};
+  H.rec.forEach(function(r){ var k=wk(r.f); if(W.indexOf(k)===-1) W.push(k); var o=S[k]||(S[k]={});
+    Object.keys(r.x).forEach(function(ic){ o[ic]=1; var vs=Object.keys(r.x[ic]); lastV[ic]=H.v[+vs[vs.length-1]]; }); });
+  W.sort(); var n=W.length, CV=(typeof CLI_VEND!=='undefined')?CLI_VEND:{}, M=(typeof CLI_MES!=='undefined')?CLI_MES:null;
+  var semN=function(k){return semCatIso(new Date(k+'T00:00:00Z'));};
+  var out=[], ultN={}, ultI={};
+  Object.keys(lastV).forEach(function(ic){ var u=-1; W.forEach(function(k,i){ if(S[k][ic]) u=i; }); ultI[ic]=u; var nm=(H.n[+ic]||'').trim().toUpperCase(); ultN[nm]=Math.max(ultN[nm]==null?-1:ultN[nm],u); });
+  Object.keys(lastV).forEach(function(ic){
+    var cod=H.cl[+ic], v=CV[cod]||lastV[ic]; if(vn&&v!==vn) return;
+    if(ultN[(H.n[+ic]||'').trim().toUpperCase()]>ultI[ic]) return;   // mismo cliente con otro codigo que compro despues
+    var ult=-1, nb=0; W.forEach(function(k,i){ if(S[k][ic]){ ult=i; nb++; } });
+    var gap=n-1-ult; if(gap<2||nb<3) return;          // 2+ semanas seguidas sin compra, cliente con 3+ semanas de compra en el registro
+    var prom=0; if(M&&M.c[cod]){ var h=M.c[cod].slice(-3), q=0; h.forEach(function(x){ if(x){prom+=x[0];q++;} }); prom=q?prom/3:0; }
+    out.push({cod:cod,cli:H.n[+ic]||cod,vend:v,gap:gap,ult:semN(W[ult]),nb:nb,frec:nb/(ult+1),prom:prom});
+  });
+  out.sort(function(a,b){ return (b.prom-a.prom)||(a.gap-b.gap); });
+  return {L:out,hasta:semN(W[n-1]),nsem:n};
+}
+function cliSinCompraHtml(vn,max){
+  var R=cliSinCompra(vn); if(!R) return '';
+  if(!R.L.length) return '<div style="background:#E8F5E9;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#375623">✅ Sin clientes habituales con más de 2 semanas sin compra (al S'+R.hasta+').</div>';
+  var L=max?R.L.slice(0,max):R.L, fm=function(v){return '$'+(v/1e6).toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})+'M';};
+  return '<div style="background:#FFF4F4;border:1px solid #F3C6C6;border-radius:8px;padding:8px 10px;margin-bottom:10px">'
+    +'<div style="font-size:11.5px;font-weight:800;color:#9C0006;margin-bottom:4px">📞 '+R.L.length+' cliente'+(R.L.length>1?'s':'')+' sin comprar hace 2 semanas o más <span style="font-weight:400;color:#888">(al S'+R.hasta+' · habituales: 3+ semanas con compra)</span></div>'
+    +'<table style="font-size:11px;margin:0;width:100%"><tr><th style="text-align:left">Cliente</th>'+(vn?'':'<th style="text-align:left">Vendedor</th>')+'<th style="text-align:center">Sem. sin compra</th><th style="text-align:center">Última</th><th style="text-align:right" title="Promedio mensual de los últimos 3 meses cerrados">Prom. mes</th></tr>'
+    +L.map(function(x){ var c=x.gap>=4?'#9C0006':x.gap>=3?'#C55A11':'#7D6608';
+      return '<tr><td><b>'+x.cli+'</b></td>'+(vn?'':'<td style="color:'+((D.colores||{})[x.vend]||'#888')+';font-weight:600">'+x.vend+'</td>')
+        +'<td style="text-align:center;font-weight:800;color:'+c+'">'+x.gap+'</td><td style="text-align:center">S'+x.ult+'</td><td style="text-align:right">'+(x.prom?fm(x.prom):'—')+'</td></tr>'; }).join('')
+    +'</table>'+(max&&R.L.length>max?'<div style="font-size:10px;color:#888;margin-top:3px">+'+(R.L.length-max)+' más · ordenados por compra mensual promedio</div>':'')+'</div>';
+}
 function motivMaybeShow(vnForce){
   if(motivShown&&!vnForce) return;
   var vn=vnForce||repVendOf(currentUserEmail);
@@ -4996,6 +5031,7 @@ function motivMaybeShow(vnForce){
     +'<div style="padding:16px 22px 6px;font-size:13px;color:#333">'
     +'<div style="font-weight:800;color:#375623;font-size:13px">✅ Tus fortalezas</div><ul style="list-style:none;padding:0;margin:4px 0 14px">'+li(r.F,'#375623','\u{1F7E2}')+'</ul>'
     +'<div style="font-weight:800;color:#C00000;font-size:13px">⚠️ A mejorar</div><ul style="list-style:none;padding:0;margin:4px 0 10px">'+li(r.W,'#C00000','\u{1F534}')+'</ul></div>'
+    +(function(){ var h=cliSinCompraHtml(vn,8); return h?'<div style="padding:0 22px 6px">'+h+'</div>':''; })()
     +'<div style="padding:0 22px 20px;text-align:right"><button onclick="document.getElementById(\'motiv-ov\').remove()" style="background:'+col+';color:#fff;border:none;border-radius:8px;padding:10px 22px;font-weight:700;font-size:13px;cursor:pointer">¡Vamos con todo!</button></div></div>';
 }
 function focoMolData(vn){
