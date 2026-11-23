@@ -726,6 +726,18 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
   </div>
   <div id="mixev-ins" style="margin-top:12px;"></div>
 </div>
+<div class="sec" style="margin-top:4px;">Venta semanal por categor&#237;a <span style="font-weight:400;color:#888;font-size:11px;">Sucursal &middot; semanas lun&#8211;dom armadas con los cortes de venta cargados</span></div>
+<div class="card" id="semcat-card" style="padding:12px 14px;margin-bottom:16px;">
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
+    <select id="semcat-cat" onchange="semCatF.cat=this.value;renderSemCat()" style="padding:6px 10px;border-radius:6px;border:.5px solid #ccc;font-size:12px;font-weight:600"></select>
+    <div class="fbtns" id="semcat-pn" style="margin:0"></div>
+    <div class="fbtns" id="semcat-met" style="margin:0;margin-left:auto"></div>
+  </div>
+  <div style="position:relative;height:260px;"><canvas id="semcat-c"></canvas></div>
+  <div id="semcat-ins" style="margin-top:10px;"></div>
+  <div style="overflow-x:auto;margin-top:8px;"><table id="semcat-t" style="font-size:11px;width:100%"></table></div>
+  <div id="semcat-nota" style="font-size:10px;color:#888;margin-top:6px;"></div>
+</div>
 <div class="sec">Apertura G2 &#8212; <span id="g2-titulo">Sucursal Antofagasta</span></div>
 <div class="card cat-rank-card" style="padding:14px;"><div id="c-g2" class="cat-rank-list cat-rank-list-sm"></div></div>
 
@@ -1205,7 +1217,7 @@ function go(n,el){
   if(n==='clientes'){ try{ renderCliMat(); }catch(e){} }
   if(n==='logistica') renderLogistica();
   if(n==='gastos' && typeof renderGastos==='function') renderGastos();
-  if(n==='categorias' && typeof renderMixEvol==='function'){ setTimeout(function(){ try{ renderMixEvol(); }catch(e){ console.error(e); } },50); }
+  if(n==='categorias' && typeof renderMixEvol==='function'){ setTimeout(function(){ try{ renderMixEvol(); }catch(e){ console.error(e); } try{ renderSemCat(); }catch(e){ console.error(e); } },50); }
 }
 function goAdmin(){
   if(opsOk){go('admin',document.querySelectorAll('.tab')[9]);renderAdmin();return;}
@@ -3258,6 +3270,97 @@ function renderMixEvol(){
   }
   h+='<div style="font-size:10px;color:#888;margin-top:6px;">pp = puntos porcentuales. Se destaca un movimiento cuando supera el 20% del peso de la categor&#237;a (m&#237;n. 1,5 pp, m&#225;x. 3 pp). * Mes en curso: participaci&#243;n parcial a la fecha de corte ('+((D.kpis&&D.kpis.fecha)||'')+'). '+(v==='Todos'?'Vista sucursal.':'Vista vendedor: '+v+' (por vendedor desde Junio; Junio con corte al d&#237;a 20 de 21).')+'</div>';
   document.getElementById('mixev-ins').innerHTML=h;
+}
+
+// ===== VENTA SEMANAL POR CATEGORIA (desde DEM_HIST) =====
+var PN_BR_SKUS=['67972','67402'];
+function isPNBr(sku,desc){ return PN_BR_SKUS.indexOf(String(sku))!==-1 || /POSTA NEGRA/i.test(desc||'') && /(\bBR\b|BRASIL)/i.test(desc||''); }
+var semCatF={cat:'VACUNO IMPORTADO',pn:'todo',met:'kg'}, semCatChart=null;
+var SEMCAT_MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function semCatIso(d){ var t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())); var dn=(t.getUTCDay()+6)%7; t.setUTCDate(t.getUTCDate()-dn+3);
+  var f=new Date(Date.UTC(t.getUTCFullYear(),0,4)); return 1+Math.round(((t-f)/864e5-3+((f.getUTCDay()+6)%7))/7); }
+function semCatData(){
+  var H=(typeof DEM_HIST!=='undefined')?DEM_HIST:null; if(!H||!H.rec) return null;
+  var W={}, cats={};
+  Object.keys(H.desc||{}).forEach(function(k){ var c=(H.desc[k]||[])[1]; if(c) cats[c]=1; });
+  H.rec.forEach(function(r){
+    var d=new Date(r.f+'T00:00:00Z'), dn=(d.getUTCDay()+6)%7, mon=new Date(d.getTime()-dn*864e5), key=mon.toISOString().slice(0,10);
+    var w=W[key]||(W[key]={key:key,mon:mon,s:semCatIso(d),dias:0,spill:false,c:{}});
+    w.dias+=r.d||0; if((r.d||0)>dn+1) w.spill=true;
+    ['kg','nt','mg'].forEach(function(f){ var o=r[f]||{}; Object.keys(o).forEach(function(sku){
+      var ds=(H.desc||{})[sku]||['',''], c=ds[1]||'OTROS', pn=isPNBr(sku,ds[0]), b=pn?'pn':'re';
+      var x=w.c[c]||(w.c[c]={pn:{kg:0,nt:0,mg:0},re:{kg:0,nt:0,mg:0}}); x[b][f]+=o[sku]; }); });
+  });
+  var L=Object.keys(W).sort().map(function(k){return W[k];});
+  return {W:L,cats:Object.keys(cats).sort()};
+}
+function semCatBtns(id,opts,cur,fn){
+  var el=document.getElementById(id); if(!el) return;
+  el.innerHTML=opts.map(function(o){return '<button class="fbtn'+(o[0]===cur?' on':'')+'" onclick="'+fn+'(\''+o[0]+'\')">'+o[1]+'</button>';}).join('');
+}
+function semCatSet(k,v){ semCatF[k]=v; renderSemCat(); }
+function semCatPN(v){ semCatSet('pn',v); } function semCatMet(v){ semCatSet('met',v); }
+function renderSemCat(){
+  var card=document.getElementById('semcat-card'); if(!card) return;
+  var S=semCatData(); if(!S||!S.W.length){ card.style.display='none'; return; } card.style.display='';
+  var sel=document.getElementById('semcat-cat');
+  if(sel && !sel.options.length){ sel.innerHTML='<option value="Todas">Todas las categorías</option>'+S.cats.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join(''); }
+  if(sel) sel.value=semCatF.cat;
+  var conPN=semCatF.cat==='VACUNO IMPORTADO'||semCatF.cat==='Todas';
+  if(!conPN) semCatF.pn='todo';
+  semCatBtns('semcat-pn',conPN?[['todo','Todo'],['sin','Sin posta negra Brasil'],['solo','Solo posta negra Brasil']]:[],semCatF.pn,'semCatPN');
+  semCatBtns('semcat-met',[['kg','Kilos'],['kgd','Kg por día'],['mm','$MM']],semCatF.met,'semCatMet');
+  var fmt=function(v,d){return (+v).toLocaleString('es-CL',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});};
+  var rows=S.W.map(function(w){
+    var a={pn:{kg:0,nt:0,mg:0},re:{kg:0,nt:0,mg:0}};
+    Object.keys(w.c).forEach(function(c){ if(semCatF.cat!=='Todas'&&c!==semCatF.cat) return; ['pn','re'].forEach(function(b){['kg','nt','mg'].forEach(function(f){a[b][f]+=w.c[c][b][f];});}); });
+    var inc=semCatF.pn==='sin'?['re']:semCatF.pn==='solo'?['pn']:['pn','re'];
+    var t={kg:0,nt:0,mg:0}; inc.forEach(function(b){['kg','nt','mg'].forEach(function(f){t[f]+=a[b][f];});});
+    var fin=new Date(w.mon.getTime()+6*864e5);
+    var lbl='S'+w.s+' '+w.mon.getUTCDate()+'-'+SEMCAT_MES[w.mon.getUTCMonth()];
+    return {w:w,lbl:lbl+(w.spill?'*':''),rango:w.mon.getUTCDate()+' '+SEMCAT_MES[w.mon.getUTCMonth()]+' – '+fin.getUTCDate()+' '+SEMCAT_MES[fin.getUTCMonth()],
+      t:t,pn:a.pn,re:a.re,dias:w.dias,kgd:w.dias?t.kg/w.dias:0,inc:inc};
+  });
+  var val=function(r,b){ var x=b?r[b]:r.t; return semCatF.met==='kg'?x.kg:semCatF.met==='mm'?x.nt/1e6:(r.dias?x.kg/r.dias:0); };
+  var ds;
+  var stack=conPN&&semCatF.pn==='todo';
+  if(stack){
+    ds=[{label:'Resto '+(semCatF.cat==='Todas'?'categorías':'vacuno importado'),data:rows.map(function(r){return +val(r,'re').toFixed(1);}),backgroundColor:'#9DB7D5',stack:'a'},
+        {label:'Posta negra Brasil',data:rows.map(function(r){return +val(r,'pn').toFixed(1);}),backgroundColor:'#9C1C1C',stack:'a'}];
+  } else {
+    ds=[{label:semCatF.pn==='solo'?'Posta negra Brasil':semCatF.pn==='sin'?'Sin posta negra Brasil':(semCatF.cat==='Todas'?'Sucursal':semCatF.cat),
+         data:rows.map(function(r){return +val(r).toFixed(1);}),backgroundColor:semCatF.pn==='solo'?'#9C1C1C':'#1F4E79'}];
+  }
+  var u=semCatF.met==='mm'?' $MM':semCatF.met==='kgd'?' kg/día':' kg';
+  var el=document.getElementById('semcat-c');
+  if(el&&typeof Chart!=='undefined'){
+    if(semCatChart){ try{semCatChart.destroy();}catch(e){} }
+    semCatChart=new Chart(el.getContext('2d'),{type:'bar',data:{labels:rows.map(function(r){return r.lbl;}),datasets:ds},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:ds.length>1,position:'bottom',labels:{boxWidth:12,font:{size:10}}},
+        tooltip:{callbacks:{title:function(it){var r=rows[it[0].dataIndex];return 'S'+r.w.s+' · '+r.rango+' · '+r.dias+' días';},
+          label:function(c){return c.dataset.label+': '+fmt(c.parsed.y,semCatF.met==='mm'?1:0)+u;},
+          footer:function(it){var r=rows[it[0].dataIndex];return stack?'Total: '+fmt(val(r),semCatF.met==='mm'?1:0)+u:'';}}}},
+        scales:{x:{stacked:stack,ticks:{font:{size:10}},grid:{display:false}},y:{stacked:stack,beginAtZero:true,ticks:{font:{size:10},callback:function(v){return fmt(v,0);}}}}}});
+  }
+  // Insight: ultima semana vs promedio por dia de las 4 anteriores
+  var n=rows.length, ins='';
+  if(n>=2){
+    var ul=rows[n-1], pr=rows.slice(Math.max(0,n-5),n-1), pd=pr.reduce(function(s,r){return s+r.t.kg;},0)/Math.max(pr.reduce(function(s,r){return s+r.dias;},0),1);
+    var dv=pd?(ul.kgd/pd-1)*100:0, c=dv>=0?'#2E7D32':'#C62828';
+    ins='<div style="background:#F4F7FB;border-radius:8px;padding:8px 12px;font-size:11.5px;color:#333">Última semana cargada (S'+ul.w.s+', '+ul.dias+' días): <b>'+fmt(ul.t.kg,0)+' kg</b>, '+fmt(ul.kgd,0)+' kg/día · '
+      +'<span style="color:'+c+';font-weight:700">'+(dv>=0?'▲ +':'▼ ')+fmt(dv,0)+'%</span> vs promedio por día de las '+pr.length+' semanas anteriores ('+fmt(pd,0)+' kg/día).'
+      +(stack&&ul.t.kg?' Posta negra Brasil: '+fmt(ul.pn.kg,0)+' kg ('+fmt(ul.pn.kg/ul.t.kg*100,0)+'% del total).':'')+'</div>';
+  }
+  document.getElementById('semcat-ins').innerHTML=ins;
+  var th='<tr><th style="text-align:left">Semana</th><th>Días</th><th style="text-align:right">Kilos</th><th style="text-align:right">Kg/día</th><th style="text-align:right">$MM</th><th style="text-align:right">$/kg</th><th style="text-align:right">Margen %</th>'
+    +(stack?'<th style="text-align:right">Posta negra BR kg</th><th style="text-align:right">% PN BR</th>':'')+'</tr>';
+  var tb=rows.slice().reverse().map(function(r){var t=r.t;return '<tr><td style="white-space:nowrap"><b>S'+r.w.s+'</b> <span style="color:#888">'+r.rango+(r.w.spill?' *':'')+'</span></td><td style="text-align:center">'+r.dias+'</td>'
+    +'<td style="text-align:right;font-weight:700">'+fmt(t.kg,0)+'</td><td style="text-align:right">'+fmt(r.kgd,0)+'</td><td style="text-align:right">'+fmt(t.nt/1e6,1)+'</td>'
+    +'<td style="text-align:right">'+(t.kg>0?'$'+fmt(t.nt/t.kg,0):'—')+'</td><td style="text-align:right">'+(t.nt?fmt(t.mg/t.nt*100,1)+'%':'—')+'</td>'
+    +(stack?'<td style="text-align:right;color:#9C1C1C;font-weight:600">'+fmt(r.pn.kg,0)+'</td><td style="text-align:right">'+(t.kg?fmt(r.pn.kg/t.kg*100,0)+'%':'—')+'</td>':'')+'</tr>';}).join('');
+  document.getElementById('semcat-t').innerHTML=th+tb;
+  document.getElementById('semcat-nota').innerHTML='Cada corte de venta que se carga suma a la semana de su fecha; la semana en curso va parcial. Kg por día permite comparar semanas con distinta cantidad de días.'
+    +(rows.some(function(r){return r.w.spill;})?' * La primera semana incluye días previos al inicio del registro.':'')+' Posta negra Brasil = SKU 67972 (Campo Largo, origen Brasil) y 67402 (BR).';
 }
 var catFiltActual='Todos';
 function buildCatTable(data){
