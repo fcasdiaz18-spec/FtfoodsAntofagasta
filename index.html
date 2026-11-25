@@ -751,7 +751,7 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
   <table id="prod-cat-tabla" style="font-size:11px;display:none;"></table>
 </div>
 </div></div>
-<div class="page" id="page-stock"><div class="pi"><div class="sec" id="stock-title">Stock disponible &#8212; 28-07-2026</div>
+<div class="page" id="page-stock"><div class="pi"><button id="imp-btn" onclick="impAbrir()" style="display:none;float:right;margin:2px 0 0 8px;background:#1F4E79;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:700;cursor:pointer">&#128203; Informe cortes importado</button><div class="sec" id="stock-title">Stock disponible &#8212; 28-07-2026</div>
 
 <div class="stk-chips" id="stk-chips"></div>
 <div class="acc" id="acc-sply" style="display:none;"><div class="acc-h" onclick="togAcc('acc-sply')"><span class="acc-t">&#128230; Control de reposici&#243;n</span><span class="acc-s" id="acc-sply-s"></span><span class="acc-a">&#9660;</span></div><div class="acc-b"><div id="sply-box" style="display:none;"></div></div></div>
@@ -2068,7 +2068,7 @@ if(fsAuth){
       isAdmin=ADMIN_EMAILS.indexOf(currentUserEmail)!==-1;
       isLogistica=LOGISTICA_EMAILS.indexOf(currentUserEmail)!==-1;
       setTimeout(function(){ try{ if(document.getElementById('tc')&&document.getElementById('sb-c')) buildCliTable(); }catch(e){ console.error(e); } },0);
-       canRO=roOk(); if(typeof aplicarVisibilidadRO==='function') aplicarVisibilidadRO(); setTimeout(function(){try{motivMaybeShow();}catch(e){}},1200); try{ sccF.v=null; renderSCC(); }catch(e){ console.error(e); }
+       canRO=roOk(); if(typeof aplicarVisibilidadRO==='function') aplicarVisibilidadRO(); setTimeout(function(){try{motivMaybeShow();}catch(e){}},1200); try{ impBtnSync(); }catch(e){} try{ sccF.v=null; renderSCC(); }catch(e){ console.error(e); }
       if(isAdmin){ opsOk=true; secOk=true; }
       var tabSec=document.getElementById('tab-seguridad');
       if(tabSec) tabSec.style.display=isAdmin?'':'none';
@@ -5057,6 +5057,103 @@ function renderSCC(){
     +'</tbody></table></div>'
     +'<div style="font-size:10px;color:#888;margin-top:6px">Semanas lunes a domingo según los cortes de venta cargados. Prom. mes = promedio de los últimos 3 meses cerrados. Clic en los encabezados para ordenar.</div>';
   card.innerHTML=h;
+}
+// ===== Informe cortes importado (solo Felipe) =====
+var impF={k:'tot',d:-1,q:'',solo:''};
+function impN(v,d){ return (+v||0).toLocaleString('es-CL',{minimumFractionDigits:d||0,maximumFractionDigits:d||0}); }
+function impBtnSync(){ var b=document.getElementById('imp-btn'); if(b) b.style.display=esFelipe()?'':'none'; }
+function impMarca(desc){ var d=(desc||'').toUpperCase(); if(d.indexOf('CAMPO LARGO')>-1) return 'CL'; if(d.indexOf('NEULAND')>-1) return 'NL'; return 'OT'; }
+function impCorte(desc){ var d=(desc||'').toUpperCase().trim(), i=d.indexOf(' V '); var c=i>0?d.slice(0,i):d; return c.replace(/\s+(BR|PY|UY|AR)$/,''); }
+function impData(){
+  var P=(D.supply||{}).params||{}, LT=P.lt||4, LTR=P.ltr||9, LIM=(P.lim_est||{}).VACIO||75, C=D.costos||{};
+  var dm={}; ((D.demanda||{}).prod||[]).forEach(function(x){ dm[x.mat]=x; });
+  var R={}, get=function(c){ return R[c]||(R[c]={corte:c,m:{CL:null,NL:null,OT:null},vd:0,kg:0,val:0,est:0,lotes:[],skus:[]}); };
+  var mk=function(){return {kg:0,cj:0,val:0,est:0,mats:[],fmin:''};};
+  (D.stock_full||[]).forEach(function(x){ if(x.cat!=='VACUNO IMPORTADO') return;
+    var c=get(impCorte(x.desc)), b=impMarca(x.desc), m=c.m[b]||(c.m[b]=mk()), cu=C[x.mat]||0;
+    m.kg+=x.total_kg; m.cj+=x.total_cajas; m.val+=x.total_kg*cu; m.est=Math.max(m.est,x.est_max); m.mats.push(x.mat+(b==='OT'?' '+x.desc:''));
+    c.kg+=x.total_kg; c.val+=x.total_kg*cu; c.est=Math.max(c.est,x.est_max); c.skus.push(x.mat);
+    var lg={}; (x.cajas_det||[]).forEach(function(l){ var o=lg[l.lote]||(lg[l.lote]={b:b,mat:x.mat,desc:x.desc,lote:l.lote,fecha:l.fecha,cajas:0,kg:0,est:0}); o.cajas+=l.cajas; o.kg+=l.kg; o.est=Math.max(o.est,l.est); });
+    Object.keys(lg).forEach(function(k){ c.lotes.push(lg[k]); });
+  });
+  Object.keys(dm).forEach(function(k){ var x=dm[k]; if(x.cat!=='VACUNO IMPORTADO') return; var c=get(impCorte(x.desc)); c.vd+=(x.vd||0); c.vdr=(c.vdr||0)+(x.vd_rec||0); c.vda=(c.vda||0)+(x.vd_ant||0); });
+  var L=Object.keys(R).map(function(k){ var c=R[k]; c.cob=c.vd>0?c.kg/c.vd:null; c.cu=c.kg?c.val/c.kg:0;
+    c.tend=c.vda>0?Math.round((c.vdr/c.vda-1)*100):null; c.rojo=LIM-c.est;
+    c.lotes.sort(function(a,b){return b.est-a.est;});
+    // estado reposicion y fechas
+    c.rep=(c.vd<=0||(!c.vdr&&c.kg<=0))?(c.kg>0?'sinv':'none'):(c.cob<LT?'rojo':c.cob<LTR?'nar':c.cob<LTR*2?'ok':'exc');
+    c.fec=c.kg<=0?'':c.est>=LIM?'rojo':c.est>=45?'ama':'ok';
+    c.riesgo=c.vd>0&&c.kg>0&&c.cob>c.rojo;   // no alcanza a venderse antes de llegar a rojo
+    return c; }).filter(function(c){return c.kg>0||(c.vdr||0)>=1;});
+  return {L:L,LT:LT,LTR:LTR,LIM:LIM};
+}
+function impSet(k){ if(impF.k===k) impF.d=-impF.d; else { impF.k=k; impF.d=(k==='corte')?1:-1; } impRender(); }
+function impRender(){
+  var box=document.getElementById('imp-body'); if(!box) return;
+  var X=impData(), L=X.L.slice(), q=impF.q.toUpperCase();
+  if(q) L=L.filter(function(c){return c.corte.indexOf(q)>-1;});
+  if(impF.solo==='rep') L=L.filter(function(c){return c.rep==='rojo'||c.rep==='nar';});
+  if(impF.solo==='fec') L=L.filter(function(c){return c.fec==='rojo'||c.fec==='ama'||c.riesgo;});
+  var gv=function(c,k){ if(k==='corte') return c.corte; if(k==='tot') return c.kg; if(k==='cl') return c.m.CL?c.m.CL.kg:0; if(k==='nl') return c.m.NL?c.m.NL.kg:0;
+    if(k==='cob') return c.cob==null?1e9:c.cob; if(k==='est') return c.est; if(k==='vd') return c.vd; if(k==='val') return c.val; return 0; };
+  L.sort(function(a,b){ var x=gv(a,impF.k), y=gv(b,impF.k); var r=typeof x==='string'?x.localeCompare(y,'es'):x-y; return r*impF.d; });
+  var fk=function(v){return v?impN(v,0):'—';}, fp=function(v){return v?'$'+impN(v,0):'—';};
+  var th=function(k,l,st){ var on=impF.k===k; return '<th rowspan="2" onclick="impSet(\''+k+'\')" style="cursor:pointer;white-space:nowrap;'+(st||'')+(on?'background:#9C1C1C;':'')+'">'+l+' <span style="font-size:9px;opacity:'+(on?1:.5)+'">'+(on?(impF.d<0?'▼':'▲'):'⇅')+'</span></th>'; };
+  var estB=function(e){ if(!e) return '—'; var c=e>=X.LIM?['#FFC7CE','#9C0006']:e>=45?['#FFEB9C','#7D6608']:['#E2EFDA','#375623']; return '<span class="badge" style="background:'+c[0]+';color:'+c[1]+'">'+e+'d</span>'; };
+  var repB={rojo:['#C00000','#fff','RECARGAR'],nar:['#F4B183','#843C0C','Recargar pronto'],ok:['#E2EFDA','#375623','OK'],exc:['#DDEBF7','#1F4E79','Holgado'],sinv:['#EDEDED','#555','Sin venta'],none:['#EDEDED','#555','—']};
+  var mcell=function(m){ return m&&m.kg?'<td style="text-align:right;border-left:2px solid #ddd">'+fk(m.kg)+'<div style="font-size:9.5px;color:#888">'+m.cj+' cj</div></td><td style="text-align:right">'+fp(m.kg?m.val/m.kg:0)+'</td><td style="text-align:center">'+estB(m.est)+'</td>'
+                                 :'<td style="text-align:center;color:#ccc;border-left:2px solid #ddd">—</td><td></td><td></td>'; };
+  var T={kg:0,val:0,cl:0,nl:0,ot:0,vd:0}; L.forEach(function(c){ T.kg+=c.kg; T.val+=c.val; T.vd+=c.vd; T.cl+=c.m.CL?c.m.CL.kg:0; T.nl+=c.m.NL?c.m.NL.kg:0; T.ot+=c.m.OT?c.m.OT.kg:0; });
+  var nRep=X.L.filter(function(c){return c.rep==='rojo'||c.rep==='nar';}).length, nFec=X.L.filter(function(c){return c.fec==='rojo'||c.fec==='ama'||c.riesgo;}).length;
+  var h='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'
+    +'<div class="kc" style="flex:1;min-width:120px;padding:8px 10px"><div class="kc-l">Stock importado</div><div class="kc-v" style="font-size:18px">'+fk(T.kg)+' kg</div><div class="kc-s">$'+impN(T.val/1e6,1)+'M a costo</div></div>'
+    +'<div class="kc" style="flex:1;min-width:120px;padding:8px 10px"><div class="kc-l">Campo Largo / Neuland</div><div class="kc-v" style="font-size:18px">'+fk(T.cl)+' / '+fk(T.nl)+'</div><div class="kc-s">'+(T.ot?fk(T.ot)+' kg otras marcas':'kg')+'</div></div>'
+    +'<div class="kc" style="flex:1;min-width:120px;padding:8px 10px"><div class="kc-l">Cobertura total</div><div class="kc-v" style="font-size:18px">'+(T.vd?impN(T.kg/T.vd,0)+' días':'—')+'</div><div class="kc-s">venta '+fk(T.vd)+' kg/día (6 sem)</div></div>'
+    +'<div class="kc" style="flex:1;min-width:120px;padding:8px 10px;cursor:pointer" onclick="impF.solo=impF.solo===\'rep\'?\'\':\'rep\';impRender()"><div class="kc-l" style="color:#C00000">⚠ Para recargar</div><div class="kc-v" style="font-size:18px;color:#C00000">'+nRep+' cortes</div><div class="kc-s">cobertura &lt; '+X.LTR+' días · clic para filtrar</div></div>'
+    +'<div class="kc" style="flex:1;min-width:120px;padding:8px 10px;cursor:pointer" onclick="impF.solo=impF.solo===\'fec\'?\'\':\'fec\';impRender()"><div class="kc-l" style="color:#9C6500">⏳ Críticos por fecha</div><div class="kc-v" style="font-size:18px;color:#9C6500">'+nFec+' cortes</div><div class="kc-s">estadía ≥45d o no alcanza a venderse antes de '+X.LIM+'d</div></div></div>'
+    +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><input class="sb" id="imp-q" placeholder="Buscar corte..." value="'+impF.q+'" oninput="impF.q=this.value;impRender();var e=document.getElementById(\'imp-q\');e.focus();e.setSelectionRange(e.value.length,e.value.length)" style="flex:1;min-width:160px;margin:0">'
+    +['','rep','fec'].map(function(k){return '<button class="fbtn'+(impF.solo===k?' on':'')+'" onclick="impF.solo=\''+k+'\';impRender()">'+({'':'Todos','rep':'Para recargar','fec':'Críticos fecha'})[k]+'</button>';}).join('')
+    +'<button class="fbtn" onclick="impCSV()">⬇ CSV</button><button class="fbtn" onclick="impPrint()">\u{1F5A8} Imprimir</button></div>'
+    +'<div style="overflow-x:auto"><table id="imp-t" style="font-size:11px;width:100%;margin:0"><thead><tr><th rowspan="2"></th>'+th('corte','Corte','text-align:left;')
+    +'<th colspan="3" style="text-align:center;border-left:2px solid #ddd;background:#2E5E3A">CAMPO LARGO</th><th colspan="3" style="text-align:center;border-left:2px solid #ddd;background:#1F4E79">NEULAND</th>'
+    +'<th colspan="2" style="text-align:center;border-left:2px solid #ddd;background:#595959">OTRAS</th>'
+    +th('tot','Total kg','text-align:right;border-left:2px solid #ddd;')+th('val','Valor costo','text-align:right;')+th('vd','Venta kg/día','text-align:right;')+th('cob','Cobertura','text-align:right;')+th('est','Estadía máx','text-align:center;')+'<th rowspan="2">Reposición</th></tr>'
+    +'<tr><th style="text-align:right;border-left:2px solid #ddd">Kg</th><th style="text-align:right">$/kg</th><th>Est.</th><th style="text-align:right;border-left:2px solid #ddd">Kg</th><th style="text-align:right">$/kg</th><th>Est.</th><th style="text-align:right;border-left:2px solid #ddd">Kg</th><th style="text-align:right">$/kg</th></tr></thead><tbody>';
+  L.forEach(function(c,i){ var rb=repB[c.rep], ot=c.m.OT;
+    h+='<tr style="cursor:pointer" onclick="var r=document.getElementById(\'impl-'+i+'\');r.style.display=r.style.display===\'none\'?\'\':\'none\'"><td style="color:#999">▸</td><td><b>'+c.corte+'</b>'+(c.riesgo?' <span title="No alcanza a venderse antes de llegar a '+X.LIM+' días" style="color:#C00000">⚠</span>':'')+'</td>'
+      +mcell(c.m.CL)+mcell(c.m.NL)
+      +(ot&&ot.kg?'<td style="text-align:right;border-left:2px solid #ddd">'+fk(ot.kg)+'</td><td style="text-align:right">'+fp(ot.val/ot.kg)+'</td>':'<td style="text-align:center;color:#ccc;border-left:2px solid #ddd">—</td><td></td>')
+      +'<td style="text-align:right;font-weight:800;border-left:2px solid #ddd">'+fk(c.kg)+'</td><td style="text-align:right">'+(c.val?'$'+impN(c.val/1e6,1)+'M':'—')+'</td>'
+      +'<td style="text-align:right">'+(c.vd?impN(c.vd,1):'—')+(c.tend!=null&&Math.abs(c.tend)>=20?' <span style="font-size:9.5px;color:'+(c.tend>0?'#375623':'#C00000')+'">'+(c.tend>0?'▲':'▼')+Math.abs(c.tend)+'%</span>':'')+'</td>'
+      +'<td style="text-align:right;font-weight:700">'+(c.cob==null?'—':impN(c.cob,0)+' d')+'</td><td style="text-align:center">'+estB(c.est)+(c.kg&&c.rojo>0?'<div style="font-size:9px;color:#888">'+c.rojo+'d a rojo</div>':'')+'</td>'
+      +'<td><span class="badge" style="background:'+rb[0]+';color:'+rb[1]+';white-space:nowrap">'+rb[2]+'</span></td></tr>';
+    h+='<tr id="impl-'+i+'" style="display:none"><td></td><td colspan="16" style="background:#F7F9FC;padding:6px 10px">'
+      +(c.lotes.length?'<table style="font-size:10.5px;margin:0;width:auto"><tr><th>Marca</th><th>SKU</th><th>Lote</th><th>F. producción</th><th style="text-align:right">Cajas</th><th style="text-align:right">Kg</th><th>Estadía</th></tr>'
+        +c.lotes.map(function(l){return '<tr><td>'+({CL:'Campo Largo',NL:'Neuland',OT:'Otra'})[l.b]+'</td><td>'+l.mat+'</td><td style="font-family:monospace">'+l.lote+'</td><td>'+l.fecha+'</td><td style="text-align:right">'+l.cajas+'</td><td style="text-align:right">'+impN(l.kg,1)+'</td><td style="text-align:center">'+estB(l.est)+'</td></tr>';}).join('')+'</table>'
+        :'<span style="color:#888">Sin stock. Venta promedio '+impN(c.vd,1)+' kg/día.</span>')+'</td></tr>';
+  });
+  h+='</tbody></table></div><div style="font-size:10px;color:#888;margin-top:6px">Venta kg/día = promedio de las últimas 6 semanas (todas las marcas del corte). Cobertura = stock ÷ venta diaria. Recargar: cobertura menor a '+X.LT+' días (rojo) o a '+X.LTR+' días (pronto); holgado: más de '+(X.LTR*2)+' días. Estadía vacío: amarillo ≥45 días, rojo ≥'+X.LIM+' días. ⚠ = al ritmo actual no se vende antes de llegar a rojo. Clic en un corte para ver sus lotes.</div>';
+  box.innerHTML=h;
+}
+function impAbrir(){
+  if(!esFelipe()) return;
+  var ov=document.getElementById('imp-ov'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.id='imp-ov'; ov.style.cssText='position:fixed;inset:0;background:rgba(15,25,45,.55);z-index:9999;overflow:auto;padding:20px 10px';
+  ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+  var f=(D.kpis||{}).fecha||'', st=(D.stock_historial||{}).fechas||[], fs=st.length?st[st.length-1].split('-').reverse().join('-'):'';
+  ov.innerHTML='<div style="background:#fff;max-width:1250px;margin:0 auto;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.3)"><div style="background:#1a2744;color:#fff;padding:12px 18px;border-radius:12px 12px 0 0;display:flex;align-items:center"><div style="flex:1"><div style="font-weight:800;font-size:15px">\u{1F969} Cortes vacuno importado — Campo Largo vs Neuland</div><div style="font-size:11px;opacity:.75">Stock al '+fs+' · venta al '+f+' · solo visible para Felipe</div></div><button onclick="document.getElementById(\'imp-ov\').remove()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer">×</button></div><div id="imp-body" style="padding:14px 18px"></div></div>';
+  document.body.appendChild(ov); impRender();
+}
+function impCSV(){
+  var X=impData(), r=[['Corte','CL kg','CL cajas','CL $/kg','CL estadia','NL kg','NL cajas','NL $/kg','NL estadia','Otras kg','Total kg','Valor costo $','Venta kg/dia','Cobertura dias','Estadia max','Reposicion']];
+  X.L.forEach(function(c){ var m=function(b,k){var x=c.m[b];return !x?'':k==='cu'?Math.round(x.kg?x.val/x.kg:0):k==='kg'?Math.round(x.kg):x[k];};
+    r.push([c.corte,m('CL','kg'),m('CL','cj'),m('CL','cu'),m('CL','est'),m('NL','kg'),m('NL','cj'),m('NL','cu'),m('NL','est'),m('OT','kg'),Math.round(c.kg),Math.round(c.val),c.vd.toFixed(1).replace('.',','),c.cob==null?'':Math.round(c.cob),c.est,c.rep]); });
+  var a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('﻿'+r.map(function(x){return x.join(';');}).join('\n')); a.download='cortes_importado_'+((D.stock_historial||{}).fechas||['']).slice(-1)[0]+'.csv'; a.click();
+}
+function impPrint(){
+  var t=document.getElementById('imp-body'); if(!t) return; var w=window.open('','_blank'); if(!w) return;
+  w.document.write('<html><head><title>Cortes importado</title><style>body{font-family:Arial,sans-serif;font-size:10px;margin:12px}table{border-collapse:collapse;width:100%}th{background:#1a2744;color:#fff;padding:3px 4px;font-size:9.5px}td{border-bottom:1px solid #e3e3e3;padding:3px 4px}.badge{padding:1px 5px;border-radius:8px;font-size:9px;font-weight:700}.kc{border:1px solid #ddd;border-radius:6px;display:inline-block;margin:0 6px 6px 0}.kc-l{font-size:9px;color:#666}.kc-s{font-size:9px;color:#888}input,button{display:none}tr[id^=impl-]{display:none}</style></head><body><h3 style="margin:0 0 8px">Cortes vacuno importado — '+document.querySelector('#imp-ov div div div div:nth-child(2)').textContent+'</h3>'+t.innerHTML+'</body></html>');
+  w.document.close(); setTimeout(function(){ w.print(); },300);
 }
 function motivMaybeShow(vnForce){
   if(motivShown&&!vnForce) return;
