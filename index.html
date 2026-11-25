@@ -3564,6 +3564,26 @@ function renderSemCat(){
     +(rows.some(function(r){return r.w.spill;})?' * La primera semana incluye días previos al inicio del registro.':'')+' Posta negra Brasil = SKU 67972 (Campo Largo, origen Brasil) y 67402 (BR).';
 }
 var catFiltActual='Todos';
+var pcSort={};
+function pcSortBy(gid,cat,k){ var o=pcSort[cat]||{k:'neto',d:-1}; pcSort[cat]=(o.k===k)?{k:k,d:-o.d}:{k:k,d:(k==='prod'||k==='cod')?1:-1}; var el=document.getElementById(gid+'-t'); if(el) el.innerHTML=pcTbl(gid,cat); }
+function pcTbl(gid,cat){
+  var PC=(D.prod_cat&&D.prod_cat[catFiltActual])||{}, o=pcSort[cat]||{k:'neto',d:-1};
+  var prods=(PC[cat]||[]).slice().sort(function(a,b){ var x=a[o.k], y=b[o.k]; var r=(typeof x==='string')?String(x).localeCompare(String(y),'es'):((+x||0)-(+y||0)); return r*o.d; });
+  var th=function(k,l,al){ var on=o.k===k; return '<th onclick="event.stopPropagation();pcSortBy(\''+gid+'\',\''+cat.replace(/'/g,"\\'")+'\',\''+k+'\')" style="cursor:pointer;user-select:none;white-space:nowrap;padding:2px 0;text-align:'+(al||'left')+';'+(on?'color:#9C1C1C;':'')+'">'+l+' <span style="font-size:9px;opacity:'+(on?1:.5)+'">'+(on?(o.d<0?'\u25BC':'\u25B2'):'\u21C5')+'</span></th>'; };
+  return '<table style="width:100%;font-size:10px;border-collapse:collapse;">'
+    +'<tr style="color:#888;text-align:left;border-bottom:.5px solid #ddd;">'+th('cod','SKU')+th('prod','Producto')+th('kg','Kilos','right')+th('precio','$/Kg','right')+th('neto','Monto Neto','right')+th('cli','Cli.','center')+th('mg','Mg %','right')+'</tr>'
+    +prods.map(function(p){
+      var pc=p.mg>=20?'#375623':p.mg>=10?'#7D6608':'#C00000';
+      return '<tr style="border-bottom:.5px solid #eee;">'
+        +'<td style="padding:3px 0;color:#999;">'+p.cod+'</td>'
+        +'<td style="font-weight:600;">'+p.prod+'</td>'
+        +'<td style="text-align:right;white-space:nowrap;">'+Number(p.kg).toLocaleString('es-CL')+'</td>'
+        +'<td style="text-align:right;white-space:nowrap;color:#666;">$'+Number(p.precio).toLocaleString('es-CL')+'</td>'
+        +'<td style="text-align:right;white-space:nowrap;">$'+Number(p.neto).toLocaleString('es-CL')+'</td>'
+        +'<td style="text-align:center;color:#888;">'+p.cli+'</td>'
+        +'<td style="text-align:right;font-weight:700;color:'+pc+';">'+p.mg+'%</td></tr>';}).join('')
+    +'</table>';
+}
 function buildCatTable(data){
   var h='<tr><th>Categoria</th><th>Part. %</th><th style="text-align:right">Monto Neto</th><th style="text-align:right">Kilos</th><th style="text-align:right">Margen %</th></tr>';
   var PC=(D.prod_cat&&D.prod_cat[catFiltActual])||{};
@@ -3585,19 +3605,7 @@ function buildCatTable(data){
     if(prods.length){
       h+='<tr><td colspan="5" style="padding:0;border:0;"><div class="cc" id="'+gid+'" style="background:#fafafa;padding:6px 10px;border-left:3px solid '+c.color+';">'
         +'<div style="font-size:10px;color:#666;margin-bottom:4px;font-weight:700;">'+c.cat+' \u2014 '+prods.length+' productos vendidos</div>'
-        +'<table style="width:100%;font-size:10px;border-collapse:collapse;">'
-        +'<tr style="color:#888;text-align:left;border-bottom:.5px solid #ddd;"><th style="padding:2px 0;">SKU</th><th>Producto</th><th style="text-align:right">Kilos</th><th style="text-align:right">$/Kg</th><th style="text-align:right">Monto Neto</th><th style="text-align:center">Cli.</th><th style="text-align:right">Mg %</th></tr>'
-        +prods.map(function(p){
-          var pc=p.mg>=20?'#375623':p.mg>=10?'#7D6608':'#C00000';
-          return '<tr style="border-bottom:.5px solid #eee;">'
-            +'<td style="padding:3px 0;color:#999;">'+p.cod+'</td>'
-            +'<td style="font-weight:600;">'+p.prod+'</td>'
-            +'<td style="text-align:right;white-space:nowrap;">'+Number(p.kg).toLocaleString('es-CL')+'</td>'
-            +'<td style="text-align:right;white-space:nowrap;color:#666;">$'+Number(p.precio).toLocaleString('es-CL')+'</td>'
-            +'<td style="text-align:right;white-space:nowrap;">$'+Number(p.neto).toLocaleString('es-CL')+'</td>'
-            +'<td style="text-align:center;color:#888;">'+p.cli+'</td>'
-            +'<td style="text-align:right;font-weight:700;color:'+pc+';">'+p.mg+'%</td></tr>';}).join('')
-        +'</table></div></td></tr>';
+        +'<div id="'+gid+'-t">'+pcTbl(gid,c.cat)+'</div></div></td></tr>';
     }
   });
   document.getElementById('tcat').innerHTML=h;
