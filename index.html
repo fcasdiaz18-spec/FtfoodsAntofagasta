@@ -692,7 +692,7 @@ td.cm-c.cur.n{background:#FFCDD2;color:#C62828}td.cm-c.cur.y{background:#2E7D32}
 </div>
 
 </div></div>
-<div class="page" id="page-metas"><div class="pi"><div class="sec" id="tit-metas">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div id="proy-adm-box2" style="display:none;margin:12px 0;"></div><div id="exec-ins" style="display:none"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl" id="lbl-dias-rest">Dias restantes</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
+<div class="page" id="page-metas"><div class="pi"><div class="sec" id="tit-metas">Metas Julio 2026 &#8212; Sucursal Antofagasta</div><div class="g3" id="mk"></div><div id="proy-adm-box2" style="display:none;margin:12px 0;"></div><div id="exec-ins" style="display:none"></div><div id="exec-ins" style="display:none"></div><div style="background:#EFF4FF;border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:center;"><div><div class="lbl">Dias trabajados / Total</div><div id="dias-metas-trab" style="font-size:18px;font-weight:700;">1 / 22 d&#237;as</div></div><div style="width:1px;height:36px;background:#c0c8e0;"></div><div><div class="lbl" id="lbl-dias-rest">Dias restantes</div><div id="dias-metas-rest" style="font-size:18px;font-weight:700;color:#C00000;">21 d&#237;as</div></div></div><div><div class="sec">P&amp;L estimado</div><table id="pl"></table></div></div></div>
 <div class="page" id="page-vendedores"><div class="pi"><div class="sec" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">Desempeno individual &#8212; Clic en fila para ver detalle <span id="vend-total-clientes-badge" style="font-size:11px;font-weight:700;background:#EFF4FF;color:#1F4E79;padding:4px 10px;border-radius:12px;"></span></div><div class="vend-grid"><div style="max-height:420px;overflow-y:auto;border-radius:8px;"><table id="tv"></table></div><div><div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Participacion Facturacion</div><div class="card" style="padding:14px;"><canvas id="c2" height="340"></canvas></div></div></div>
 
 <div id="seg-gest"></div><div id="vcs"></div></div></div>
@@ -1980,6 +1980,7 @@ function renderProyAdm(){
 }
 function aplicarVisibilidadRO(){
   try{ renderProyAdm(); }catch(e){ console.error(e); }
+  try{ renderExecIns(); }catch(e){ console.error(e); }
   try{ renderExecIns(); }catch(e){ console.error(e); }
   var elc=document.getElementById('ro-card'); if(elc) elc.style.display=canRO?'':'none';
   if(typeof aplicarVisibilidadCosto==='function'){ try{ aplicarVisibilidadCosto(); }catch(e){} }
@@ -5898,6 +5899,135 @@ function renderExecIns(){
 function exCopy(){
   var el=document.getElementById('exec-ins'),t='FT Foods Antofagasta – Reunión ejecutiva ('+D.kpis.fecha+')\n\n'+(el&&el._txt||'');
   var X=exData();t+='\n\nCategorías (proyección vs '+X.mesAnt.toLowerCase()+'):\n'+X.cats.map(function(c){return '- '+c.cat+': $'+exN(c.proy,1)+' MM ('+(c.d_fact!=null?exS(c.d_fact,0)+'%':'nuevo')+'), mix '+exN(c.pct,1)+'%, margen '+exN(c.mg,1)+'% ('+(c.o_mg?exS(c.d_mg,1)+' pts':'—')+')';}).join('\n');
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){alert('Resumen copiado.');},function(){window.prompt('Copia el resumen:',t);});
+}
+
+// ===== INSIGHTS EJECUTIVOS (solo administrador) - pestaña Metas =====
+function exN(x,d){return Number(x||0).toLocaleString('es-CL',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});}
+function exS(x,d){return (x>=0?'+':'')+exN(x,d);}
+function exCat(c){return String(c||'').replace('VACUNO CONGELADO - DESPOSTE','DESPOSTE CONG.').replace(/^VACUNO /,'VAC. ');}
+function exData(){
+  var K=D.kpis,dt=K.dias_trabajados||1,dtot=K.dias_totales||21,f=dtot/dt;
+  var H=(typeof HIST!=='undefined'&&HIST.length)?HIST[HIST.length-1]:null,mesAnt=H?String(H.mes).split(' ')[0]:'mes anterior';
+  var O={};(H&&H.cat_global||[]).forEach(function(c){O[c.cat]=c;});
+  var T=(D.cat_global||[]).reduce(function(a,c){return a+c.fact;},0)||1,TO=(H&&H.cat_global||[]).reduce(function(a,c){return a+c.fact;},0)||1;
+  // ritmo ultimos 5 dias vs 5 anteriores por categoria (DEM_VEND)
+  var RIT={},rs=(typeof DEM_VEND!=='undefined'&&DEM_VEND)?DEM_VEND.rec.slice():[];
+  var i=rs.length-1,sem=[],ant=[],sd=0;while(i>=0&&sd<5){sem.push(rs[i]);sd+=rs[i].d||0;i--;}var ad=0;while(i>=0&&ad<5){ant.push(rs[i]);ad+=rs[i].d||0;i--;}
+  var acc=function(L,k){L.forEach(function(r){for(var iv in r.x)for(var ic in r.x[iv]){var c=DEM_VEND.c[+ic],a=r.x[iv][ic];if(c==='__PN__')c='VACUNO IMPORTADO';if(c==='CECINAS')c='ELABORADOS';if(c==='OTRAS VENTAS')c='OTROS';
+    var o=RIT[c]||(RIT[c]={s:[0,0,0],a:[0,0,0]});for(var j=0;j<3;j++)o[k][j]+=a[j];}});};
+  acc(sem,'s');acc(ant,'a');
+  var PN={s:0,a:0,nov:0,oct:0};if(rs.length){var ip=DEM_VEND.c.indexOf('__PN__');rs.forEach(function(r){var m=r.m;for(var iv in r.x){var a=r.x[iv][String(ip)];if(!a)continue;
+    if(m===String(K.fecha).slice(6,10)+'-'+String(K.fecha).slice(3,5))PN.nov+=a[0];else if(r.m<String(K.fecha).slice(6,10)+'-'+String(K.fecha).slice(3,5)&&r.m>=(function(){var y=+String(K.fecha).slice(6,10),mo=+String(K.fecha).slice(3,5)-1;if(mo<1){mo=12;y--;}return y+'-'+('0'+mo).slice(-2);})())PN.oct+=a[0];}});
+    sem.forEach(function(r){for(var iv in r.x){var a=r.x[iv][String(ip)];if(a)PN.s+=a[0];}});ant.forEach(function(r){for(var iv in r.x){var a=r.x[iv][String(ip)];if(a)PN.a+=a[0];}});}
+  var DOH=(D.doh&&D.doh.cat)||{};
+  var cats=(D.cat_global||[]).map(function(c){var o=O[c.cat]||{fact:0,kg:0,mg:0,pct:0},pf=c.fact*f,pk=c.kg*f,r=RIT[c.cat];
+    return {cat:c.cat,fact:c.fact,kg:c.kg,mg:c.mg,pk:c.kg?c.fact*1e6/c.kg:0,pct:c.fact/T*100,proy:pf,proy_kg:pk,
+      o_fact:o.fact,o_kg:o.kg,o_mg:o.mg,o_pk:o.kg?o.fact*1e6/o.kg:0,o_pct:o.fact/TO*100,
+      d_fact:o.fact?(pf/o.fact-1)*100:null,d_kg:o.kg?(pk/o.kg-1)*100:null,d_mg:c.mg-(o.mg||0),d_pk:o.kg&&c.kg?((c.fact/c.kg)/(o.fact/o.kg)-1)*100:null,
+      mg_mm:pf*c.mg/100,o_mg_mm:o.fact*(o.mg||0)/100,
+      rit:r&&ad&&sd&&r.a[0]>0?((r.s[0]/sd)/(r.a[0]/ad)-1)*100:null,rit_mg:r&&r.s[1]?r.s[2]/r.s[1]*100:null,
+      doh:DOH[c.cat]?DOH[c.cat].doh:null,stock:DOH[c.cat]?DOH[c.cat].kg:null};});
+  // descomposicion margen % : mix vs tasa
+  var mix=0,tasa=0;cats.forEach(function(c){mix+=(c.pct-c.o_pct)/100*(c.o_mg||0);tasa+=c.pct/100*(c.mg-(c.o_mg||0));});
+  (H&&H.cat_global||[]).forEach(function(o){if(!cats.some(function(c){return c.cat===o.cat;}))mix+=(0-o.fact/TO*100)/100*o.mg;});
+  var HK=H?H.kpis:{},vs=(D.vendedores||[]),nCli=vs.reduce(function(a,v){return a+(v.n_cli||0);},0),nCliO=H?H.vendedores.reduce(function(a,v){return a+(v.n_cli||0);},0):null;
+  var perd=(typeof repPerdidos==='function')?repPerdidos(vs.map(function(v){return v.nombre;})):[];
+  var rec=0;Object.keys((D.bono||{}).rec||{}).forEach(function(v){rec+=(D.bono.rec[v]||{}).n||0;});
+  var HV={};(H?H.vendedores:[]).forEach(function(v){HV[v.nombre]=v;});
+  var vend=vs.filter(function(v){return HV[v.nombre]&&HV[v.nombre].fact>20;}).map(function(v){var o=HV[v.nombre],p=v.fact*f;
+    return {n:v.nombre,proy:p,o:o.fact,d:(p/o.fact-1)*100,mg:v.margen_pct,o_mg:o.margen_pct,obj:(((D.bono||{}).metas||{})[v.nombre]||{}).mg_obj};});
+  var tS=0,tA=0;Object.keys(RIT).forEach(function(c){tS+=RIT[c].s[1];tA+=RIT[c].a[1];});
+  return {K:K,f:f,H:H,HK:HK,mesAnt:mesAnt,cats:cats,mix:mix,tasa:tasa,nCli:nCli,nCliO:nCliO,perd:perd,rec:rec,vend:vend,PN:PN,
+    rit:sd&&ad&&tA?((tS/sd)/(tA/ad)-1)*100:null,sd:sd,ad:ad,pk:K.kg?K.fact*1e6/K.kg:0,o_pk:HK.kg?HK.fact*1e6/HK.kg:0};
+}
+function exCards(X){
+  var K=X.K,HK=X.HK,ma=X.mesAnt.toLowerCase(),dr=K.dias_restantes,C=[];
+  var row=function(l,v,c){return '<div class="ex-dr"><span>'+l+'</span><b'+(c?' style="color:'+c+'"':'')+'>'+v+'</b></div>';};
+  var G='#2E7D32',R='#C62828';
+  // 1 venta
+  var pf=K.proy_f,okF=pf>=K.meta_fact;
+  C.push({t:okF?'g':'r',ic:'💵',h:(K.avance_f>=100?'Meta de venta cumplida':'Venta al '+exN(K.avance_f,0)+'% de la meta')+(dr?' a '+dr+' día'+(dr>1?'s':'')+' del cierre':''),
+    s:'Cerramos en ~$'+exN(pf)+' MM ('+exN(pf/K.meta_fact*100,0)+'% de meta, '+exS((pf/HK.fact-1)*100,0)+'% vs '+ma+')',
+    d:row('Acumulado','$'+exN(K.fact)+' MM')+row('Meta','$'+exN(K.meta_fact)+' MM')+row('Proyección cierre','$'+exN(pf)+' MM',okF?G:R)+row(X.mesAnt+' cerrado','$'+exN(HK.fact,1)+' MM')+(X.rit!=null?row('Ritmo últimos '+X.sd+' días',exS(X.rit,0)+'% vs días previos',X.rit>=0?G:R):'')});
+  // 2 margen
+  var dm=HK.margen_pct!=null?K.margen_pct-HK.margen_pct:0;
+  var vi=X.cats.filter(function(c){return c.cat==='VACUNO IMPORTADO';})[0];
+  C.push({t:dm>=0?'g':'r',ic:'💰',h:'Margen '+exN(K.margen_pct,1)+'%: '+exS(K.margen_pct-K.meta_mg_pct,1)+' pts sobre meta'+(dm<0?', pero '+exS(dm,1)+' vs '+ma:''),
+    s:dm<0?'La mitad es mix ('+exS(X.mix,1)+' pts) y la mitad precio/costo ('+exS(X.tasa,1)+' pts)':'Sube por mix ('+exS(X.mix,1)+') y precio/costo ('+exS(X.tasa,1)+')',
+    d:row('Margen $','$'+exN(K.margen)+' MM → proy. $'+exN(K.proy_m)+' MM')+row('Efecto mix',exS(X.mix,1)+' pts',X.mix>=0?G:R)+row('Efecto precio/costo',exS(X.tasa,1)+' pts',X.tasa>=0?G:R)
+      +(vi?row('Vacuno importado','mix '+exN(vi.pct,0)+'% (antes '+exN(vi.o_pct,0)+'%) · margen '+exN(vi.mg,1)+'% ('+exS(vi.d_mg,1)+' pts)',vi.d_mg>=0?G:R):'')+row('Resultado operacional','$'+exN(K.ro,1)+' MM ('+exN(K.avance_ro,0)+'% meta) → proy. $'+exN(K.proy_ro,1)+' MM',K.avance_ro>=100?G:R)});
+  // 3 categorias
+  var Cs=X.cats.filter(function(c){return c.o_fact>5;}),dd=function(c){return c.proy-c.o_fact;};
+  var up=Cs.slice().sort(function(a,b){return dd(b)-dd(a);})[0],dn=Cs.slice().sort(function(a,b){return dd(a)-dd(b);})[0];
+  if(up&&dn)C.push({t:'n',ic:'🥩',h:exCat(up.cat)+' '+exS(up.d_fact,0)+'% · '+exCat(dn.cat)+' '+exS(dn.d_fact,0)+'%',
+    s:'Proyección vs '+ma+': '+exS(dd(up),0)+' MM y '+exS(dd(dn),0)+' MM',
+    d:Cs.slice().sort(function(a,b){return dd(b)-dd(a);}).map(function(c){return row(exCat(c.cat),exS(dd(c),0)+' MM ('+exS(c.d_fact,0)+'%) · mg '+exN(c.mg,1)+'%',dd(c)>=0?G:R);}).join('')});
+  // 4 kilos
+  var okK=K.proy_k>=K.meta_k;
+  C.push({t:okK?'g':'r',ic:'⚖️',h:'Kilos al '+exN(K.proy_k/K.meta_k*100,0)+'% de la meta al cierre',
+    s:(okK?'':'Faltarían ~'+exN(K.meta_k-K.proy_k)+' kg · ')+'precio promedio '+exS((X.pk/X.o_pk-1)*100,1)+'% vs '+ma,
+    d:row('Acumulado',exN(K.kg)+' kg')+row('Proyección',exN(K.proy_k)+' kg',okK?G:R)+row('Meta',exN(K.meta_k)+' kg')+row('Precio promedio','$'+exN(X.pk)+'/kg (antes $'+exN(X.o_pk)+')')
+      +(X.PN.oct||X.PN.nov?row('Posta negra Brasil','proy. '+exN(X.PN.nov*X.f)+' kg vs '+exN(X.PN.oct)+' kg en '+ma,X.PN.nov*X.f>=X.PN.oct?G:R):'')});
+  // 5 cartera
+  var pf_=X.perd.reduce(function(a,c){return a+c.fact_ant;},0),byV={};X.perd.forEach(function(c){var v=String(c.vend||'—').split(' ')[0];byV[v]=byV[v]||{n:0,f:0};byV[v].n++;byV[v].f+=c.fact_ant;});
+  C.push({t:X.perd.length?'r':'g',ic:'📞',h:X.perd.length+' clientes de '+ma+' aún sin compra',
+    s:'$'+exN(pf_,1)+' MM en riesgo · '+X.nCli+' clientes activos (antes '+X.nCliO+') · '+X.rec+' recuperados',
+    d:Object.keys(byV).sort(function(a,b){return byV[b].f-byV[a].f;}).map(function(v){return row(v,byV[v].n+' clientes · $'+exN(byV[v].f,1)+' MM');}).join('')
+      +'<div class="ex-sub">Mayores: '+repE(X.perd.slice(0,4).map(function(c){return c.cli+' ($'+exN(c.fact_ant,1)+')';}).join(' · '))+'</div>'});
+  // 6 equipo + stock
+  var bajo=X.vend.filter(function(v){return v.obj&&v.mg<v.obj;}),S=D.stats||{};
+  C.push({t:bajo.length?'r':'g',ic:'👥',h:bajo.length+' de '+X.vend.filter(function(v){return v.obj;}).length+' vendedores bajo su margen objetivo',
+    s:'Stock crítico '+exN(S.pct_rojo,1)+'% ('+exN(S.kg_rojo)+' kg)',
+    d:X.vend.slice().sort(function(a,b){return b.proy-a.proy;}).map(function(v){return row(v.n.split(' ')[0],'proy. $'+exN(v.proy,0)+' MM ('+exS(v.d,0)+'%) · mg '+exN(v.mg,1)+'%'+(v.obj?' / '+exN(v.obj,0)+'%':''),v.obj&&v.mg<v.obj?R:G);}).join('')
+      +row('Stock libre',exN(S.total_kg)+' kg · '+exN(S.cajas_criticas)+' cajas críticas')});
+  return C;
+}
+var EX_CSS='<style>.ex-w{background:linear-gradient(180deg,#0F2A44,#1F4E79);border-radius:16px;padding:16px;margin:12px 0;color:#fff;box-shadow:0 8px 24px rgba(15,42,68,.25)}'
+ +'.ex-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}.ex-t{font-size:16px;font-weight:800}.ex-st{font-size:10.5px;opacity:.7}'
+ +'.ex-cp{padding:7px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:#fff;font-size:11px;font-weight:700;cursor:pointer}'
+ +'.ex-k{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}.ex-kc{background:rgba(255,255,255,.08);border-radius:12px;padding:10px 12px}'
+ +'.ex-kl{font-size:9.5px;letter-spacing:.8px;opacity:.75;text-transform:uppercase;font-weight:700}.ex-kv{font-size:22px;font-weight:800;margin:2px 0}'
+ +'.ex-kb{height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;margin:4px 0}.ex-kb i{display:block;height:100%;border-radius:3px}'
+ +'.ex-ks{font-size:10px;opacity:.85}.ex-chip{display:inline-block;font-size:10px;font-weight:800;border-radius:10px;padding:1px 7px;margin-left:4px}'
+ +'.ex-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}.ex-c{background:#fff;color:#222;border-radius:12px;border-left:5px solid #1F4E79;cursor:pointer;transition:transform .1s}'
+ +'.ex-c:hover{transform:translateY(-1px)}.ex-c.g{border-left-color:#2E7D32}.ex-c.r{border-left-color:#C62828}'
+ +'.ex-ch{display:flex;gap:10px;align-items:flex-start;padding:10px 12px}.ex-ic{font-size:20px;line-height:1}.ex-h{font-size:12.5px;font-weight:800;line-height:1.3}.ex-s{font-size:11px;color:#666;margin-top:2px}'
+ +'.ex-ar{margin-left:auto;color:#aaa;font-size:11px;transition:transform .15s}.ex-c.on .ex-ar{transform:rotate(90deg)}.ex-d{display:none;padding:0 12px 10px 42px}.ex-c.on .ex-d{display:block}'
+ +'.ex-dr{display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:4px 0;border-bottom:1px dashed #eee}.ex-dr span{color:#666}.ex-sub{font-size:10.5px;color:#666;margin-top:6px}'
+ +'.ex-cat{background:#fff;color:#222;border-radius:12px;margin-top:10px;padding:10px 12px}.ex-cat summary{cursor:pointer;font-weight:800;font-size:12.5px;color:#1F4E79}'
+ +'.ex-cr{display:grid;grid-template-columns:130px 1fr 70px 62px;gap:8px;align-items:center;font-size:11px;padding:5px 0;border-bottom:1px solid #f2f2f2}'
+ +'.ex-bar{height:14px;background:#EEF2F7;border-radius:7px;position:relative;overflow:hidden}.ex-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:7px}.ex-bar b{position:absolute;left:6px;top:0;font-size:9.5px;line-height:14px;color:#123}'
+ +'@media(max-width:760px){.ex-k{grid-template-columns:1fr 1fr}.ex-cards{grid-template-columns:1fr}.ex-cr{grid-template-columns:95px 1fr 58px 52px}}</style>';
+function renderExecIns(){
+  var el=document.getElementById('exec-ins');if(!el)return;
+  if(!isAdmin){el.style.display='none';el.innerHTML='';return;}
+  var X=exData(),K=X.K,HK=X.HK,ma=X.mesAnt.toLowerCase(),Cd=exCards(X);
+  var tile=function(l,v,p,sub,vs){var c=p>=100?'#66BB6A':p>=90?'#FFCA28':'#EF5350';
+    return '<div class="ex-kc"><div class="ex-kl">'+l+'</div><div class="ex-kv">'+v+'</div><div class="ex-kb"><i style="width:'+Math.min(p,100)+'%;background:'+c+'"></i></div>'
+      +'<div class="ex-ks">'+sub+(vs!=null?'<span class="ex-chip" style="background:'+(vs>=0?'#2E7D32':'#C62828')+'">'+exS(vs,0)+'% vs '+ma.slice(0,3)+'</span>':'')+'</div></div>';};
+  var h=EX_CSS+'<div class="ex-w"><div class="ex-hd"><div><div class="ex-t">&#128188; Resumen de la zona para gerencia</div><div class="ex-st">Solo tú &middot; día '+K.dias_trabajados+' de '+K.dias_totales+' ('+repE(K.fecha)+') &middot; toca cada punto para ver el detalle</div></div>'
+    +'<button class="ex-cp" onclick="exCopy()">&#128203; Copiar resumen</button></div><div class="ex-k">'
+    +tile('Facturación','$'+exN(K.proy_f)+' MM',K.proy_f/K.meta_fact*100,exN(K.proy_f/K.meta_fact*100,0)+'% meta al cierre',HK.fact?(K.proy_f/HK.fact-1)*100:null)
+    +tile('Margen bruto','$'+exN(K.proy_m)+' MM',K.proy_m/K.meta_mg*100,exN(K.margen_pct,1)+'% · '+exN(K.proy_m/K.meta_mg*100,0)+'% meta',HK.margen?(K.proy_m/HK.margen-1)*100:null)
+    +tile('Resultado op.','$'+exN(K.proy_ro,1)+' MM',K.proy_ro/K.meta_ro*100,exN(K.proy_ro/K.meta_ro*100,0)+'% meta al cierre',null)
+    +tile('Kilos',exN(K.proy_k/1000,1)+' t',K.proy_k/K.meta_k*100,exN(K.proy_k/K.meta_k*100,0)+'% meta al cierre',HK.kg?(K.proy_k/HK.kg-1)*100:null)
+    +'</div><div class="ex-cards">';
+  Cd.forEach(function(c){h+='<div class="ex-c '+c.t+'" onclick="this.classList.toggle(\'on\')"><div class="ex-ch"><span class="ex-ic">'+c.ic+'</span><div><div class="ex-h">'+repE(c.h)+'</div><div class="ex-s">'+repE(c.s)+'</div></div><span class="ex-ar">&#9654;</span></div><div class="ex-d">'+c.d+'</div></div>';});
+  h+='</div><details class="ex-cat"><summary>&#128202; Categorías: proyección al cierre vs '+repE(ma)+'</summary>';
+  var mx=Math.max.apply(null,X.cats.map(function(c){return Math.max(c.proy,c.o_fact);}))||1;
+  h+='<div class="ex-cr" style="font-size:9.5px;color:#999;font-weight:700"><span>Categoría</span><span>Proyección $MM (línea = '+repE(ma)+')</span><span style="text-align:right">vs '+repE(ma.slice(0,3))+'</span><span style="text-align:right">Margen</span></div>';
+  X.cats.forEach(function(c){var w=c.proy/mx*100,o=c.o_fact/mx*100,d=c.d_fact;
+    h+='<div class="ex-cr" title="Kg proy. '+exN(c.proy_kg)+' ('+(c.d_kg!=null?exS(c.d_kg,0)+'%':'—')+') · $/kg '+exN(c.pk)+' · mix '+exN(c.pct,1)+'% · ritmo 5d '+(c.rit!=null?exS(c.rit,0)+'%':'—')+(c.doh!=null?' · DOH '+exN(c.doh,1)+' d':'')+'"><b>'+repE(exCat(c.cat))+'</b>'
+      +'<div class="ex-bar"><i style="width:'+w+'%;background:'+(d==null||d>=0?'#81C784':'#E57373')+'"></i><span style="position:absolute;left:'+o+'%;top:-2px;bottom:-2px;width:2px;background:#123"></span><b>'+exN(c.proy,0)+'</b></div>'
+      +'<span style="text-align:right;font-weight:800;color:'+(d==null||d>=0?'#2E7D32':'#C62828')+'">'+(d!=null?exS(d,0)+'%':'nuevo')+'</span>'
+      +'<span style="text-align:right;font-weight:800;color:'+(c.mg<6?'#C62828':c.mg<12?'#B26A00':'#2E7D32')+'">'+exN(c.mg,1)+'%<small style="display:block;font-weight:600;font-size:9px;color:'+(c.d_mg>=0?'#2E7D32':'#C62828')+'">'+(c.o_mg?exS(c.d_mg,1)+' pts':'')+'</small></span></div>';});
+  h+='<div style="font-size:9.5px;color:#999;margin-top:6px">Proyección lineal ('+K.dias_totales+'/'+K.dias_trabajados+' días). Pasa el cursor sobre una categoría para ver kilos, $/kg, mix, ritmo y días de inventario.</div></details></div>';
+  el.innerHTML=h;el.style.display='';
+  el._txt=Cd.map(function(c){return '• '+c.h+'. '+c.s+'.';}).join('\n');
+}
+function exCopy(){
+  var el=document.getElementById('exec-ins'),t='FT Foods Antofagasta – Resumen zona ('+D.kpis.fecha+')\n\n'+(el&&el._txt||'');
   (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){alert('Resumen copiado.');},function(){window.prompt('Copia el resumen:',t);});
 }
 
